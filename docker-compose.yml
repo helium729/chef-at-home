@@ -42,6 +42,7 @@ services:
         condition: service_healthy
     environment:
       - DEBUG=1
+      - SECRET_KEY=dev-secret-key-for-docker-compose-only
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/familychef
       - REDIS_URL=redis://redis:6379/0
 
@@ -57,6 +58,7 @@ services:
         condition: service_healthy
     environment:
       - DEBUG=1
+      - SECRET_KEY=dev-secret-key-for-docker-compose-only
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/familychef
       - REDIS_URL=redis://redis:6379/0
 
@@ -72,6 +74,7 @@ services:
         condition: service_healthy
     environment:
       - DEBUG=1
+      - SECRET_KEY=dev-secret-key-for-docker-compose-only
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/familychef
       - REDIS_URL=redis://redis:6379/0
 
