@@ -97,6 +97,40 @@ familychef/
 
 This project follows the roadmap outlined in `Roadmap.md`. Current status: **Phase 0 Setup** ✅
 
+### Code Quality and CI/CD
+
+The project includes comprehensive CI/CD workflows:
+
+#### Continuous Integration
+- **Automated Testing**: Django tests run on Python 3.11 and 3.12
+- **Code Formatting**: Black formatter ensures consistent code style
+- **Import Sorting**: isort organizes imports automatically
+- **Linting**: flake8 catches syntax errors and style issues
+- **Security Scanning**: bandit and safety scan for security vulnerabilities
+- **Docker Testing**: Full Docker Compose stack validation
+
+#### Development Tools
+- **Code Formatting**: Run `black .` to format code
+- **Import Sorting**: Run `isort .` to organize imports
+- **Linting**: Run `flake8 .` to check for issues
+- **Security**: Run `bandit -r .` and `safety scan -r requirements.txt`
+
+#### Running Tests Locally
+```bash
+# Install development dependencies
+pip install -r requirements-dev.txt
+
+# Run Django tests
+python manage.py test
+
+# Run all code quality checks
+black --check .
+isort --check-only .
+flake8 .
+bandit -r .
+safety scan -r requirements.txt
+```
+
 For detailed project specifications, user flows, and development phases, see [Roadmap.md](./Roadmap.md).
 
 ## License
