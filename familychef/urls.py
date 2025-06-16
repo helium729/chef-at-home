@@ -32,7 +32,7 @@ router = DefaultRouter()
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/", include(router.urls)),
-    path("api/", include("core.urls")),
+    path("api/core/", include("core.urls")),
     path("api/health/", api_health_check, name="api_health"),
     path("api-auth/", include("rest_framework.urls")),
     path("auth/", include("allauth.urls")),
