@@ -3,12 +3,15 @@ from rest_framework import permissions, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from .models import Cuisine, Family, FamilyMember, Ingredient, PantryStock, RecipeIngredient
+from .models import Cuisine, Family, FamilyMember, Ingredient, Order, OrderItemIngredient, PantryStock, RecipeIngredient
+from .utils import send_order_update
 from .serializers import (
     CuisineSerializer,
     FamilyMemberSerializer,
     FamilySerializer,
     IngredientSerializer,
+    MenuCuisineSerializer,
+    OrderSerializer,
     PantryStockSerializer,
     RecipeIngredientSerializer,
     UserSerializer,
@@ -121,3 +124,70 @@ class PantryStockViewSet(viewsets.ModelViewSet):
         # Users can only see pantry stock from their families
         user_families = FamilyMember.objects.filter(user=self.request.user).values_list("family", flat=True)
         return PantryStock.objects.filter(family__in=user_families)
+
+
+class MenuViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    ViewSet for viewing menu with availability information
+    """
+    
+    queryset = Cuisine.objects.all()
+    serializer_class = MenuCuisineSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_queryset(self):
+        # Users can only see cuisines from their families
+        user_families = FamilyMember.objects.filter(user=self.request.user).values_list("family", flat=True)
+        return Cuisine.objects.filter(family__in=user_families)
+
+
+class OrderViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for managing orders
+    """
+    
+    queryset = Order.objects.all()
+    serializer_class = OrderSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_queryset(self):
+        # Users can only see orders from their families
+        user_families = FamilyMember.objects.filter(user=self.request.user).values_list("family", flat=True)
+        return Order.objects.filter(family__in=user_families)
+    
+    def perform_create(self, serializer):
+        # Create order and automatically create OrderItemIngredient snapshots
+        order = serializer.save()
+        
+        # Create ingredient snapshots from the cuisine recipe
+        for recipe_ingredient in order.cuisine.recipe_ingredients.all():
+            OrderItemIngredient.objects.create(
+                order=order,
+                ingredient=recipe_ingredient.ingredient,
+                quantity=recipe_ingredient.quantity,
+                unit=recipe_ingredient.unit
+            )
+        
+        # Send WebSocket notification
+        order_data = OrderSerializer(order, context={'request': self.request}).data
+        send_order_update(order.family.id, order_data)
+    
+    @action(detail=True, methods=["patch"])
+    def update_status(self, request, pk=None):
+        """Update order status"""
+        order = self.get_object()
+        new_status = request.data.get("status")
+        
+        if new_status not in dict(Order.STATUS_CHOICES):
+            return Response({"error": "Invalid status"}, status=400)
+        
+        order.status = new_status
+        order.save()
+        
+        # Send WebSocket notification
+        serializer = self.get_serializer(order)
+        send_order_update(order.family.id, serializer.data)
+        
+        # TODO: If status is DONE, deduct ingredients from pantry
+        
+        return Response(serializer.data)

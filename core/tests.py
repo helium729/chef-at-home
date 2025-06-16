@@ -4,10 +4,11 @@ from decimal import Decimal
 
 from django.contrib.auth.models import User
 from django.test import Client, TestCase
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from .models import Cuisine, Family, FamilyMember, Ingredient, PantryStock, RecipeIngredient
+from .models import Cuisine, Family, FamilyMember, Ingredient, Order, PantryStock, RecipeIngredient
 
 
 class HealthCheckTests(TestCase):
@@ -229,3 +230,142 @@ class APITests(APITestCase):
         stock_data = response.json()
         self.assertEqual(float(stock_data["qty_available"]), 15.5)
         self.assertEqual(stock_data["unit"], "kg")
+
+    def test_menu_availability(self):
+        """Test menu endpoint shows availability information"""
+        self.client.force_authenticate(user=self.user)
+        
+        # Create a cuisine with ingredients
+        cuisine = Cuisine.objects.create(
+            name="Test Dish",
+            description="A test dish",
+            default_time_min=30,
+            created_by=self.user,
+            family=self.family,
+        )
+        
+        # Add ingredient requirement
+        RecipeIngredient.objects.create(
+            cuisine=cuisine,
+            ingredient=self.ingredient,
+            quantity=Decimal("2.0"),
+            unit="pieces",
+            is_optional=False,
+        )
+        
+        # Test without stock - should be unavailable
+        response = self.client.get("/api/menu/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        data = response.json()
+        if "results" in data:
+            menu_items = data["results"]
+        else:
+            menu_items = data
+            
+        dish = next((item for item in menu_items if item["name"] == "Test Dish"), None)
+        self.assertIsNotNone(dish)
+        self.assertFalse(dish["is_available"])
+        
+        # Add sufficient stock
+        PantryStock.objects.create(
+            family=self.family,
+            ingredient=self.ingredient,
+            qty_available=Decimal("5.0"),
+            unit="pieces",
+        )
+        
+        # Test with stock - should be available
+        response = self.client.get("/api/menu/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        data = response.json()
+        if "results" in data:
+            menu_items = data["results"]
+        else:
+            menu_items = data
+            
+        dish = next((item for item in menu_items if item["name"] == "Test Dish"), None)
+        self.assertIsNotNone(dish)
+        self.assertTrue(dish["is_available"])
+
+    def test_order_creation(self):
+        """Test order creation"""
+        self.client.force_authenticate(user=self.user)
+        
+        # Create a cuisine
+        cuisine = Cuisine.objects.create(
+            name="Test Order Dish",
+            description="A test dish for ordering",
+            default_time_min=45,
+            created_by=self.user,
+            family=self.family,
+        )
+        
+        # Add ingredient to the cuisine
+        RecipeIngredient.objects.create(
+            cuisine=cuisine,
+            ingredient=self.ingredient,
+            quantity=Decimal("3.0"),
+            unit="pieces",
+        )
+        
+        # Create order
+        data = {
+            "family_id": self.family.id,
+            "cuisine_id": cuisine.id,
+            "scheduled_for": (timezone.now() + timedelta(hours=2)).isoformat(),
+        }
+        response = self.client.post("/api/orders/", data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        
+        order_data = response.json()
+        self.assertEqual(order_data["status"], "NEW")
+        self.assertEqual(order_data["cuisine"]["name"], "Test Order Dish")
+        self.assertEqual(order_data["created_by"]["username"], "testuser")
+        
+        # Check that OrderItemIngredient was created
+        order_id = order_data["id"]
+        order = Order.objects.get(id=order_id)
+        self.assertEqual(order.order_ingredients.count(), 1)
+        
+        order_ingredient = order.order_ingredients.first()
+        self.assertEqual(order_ingredient.ingredient, self.ingredient)
+        self.assertEqual(order_ingredient.quantity, Decimal("3.0"))
+        self.assertEqual(order_ingredient.unit, "pieces")
+
+    def test_order_status_update(self):
+        """Test order status update"""
+        self.client.force_authenticate(user=self.user)
+        
+        # Create cuisine and order
+        cuisine = Cuisine.objects.create(
+            name="Status Test Dish",
+            default_time_min=20,
+            created_by=self.user,
+            family=self.family,
+        )
+        
+        order = Order.objects.create(
+            family=self.family,
+            cuisine=cuisine,
+            created_by=self.user,
+            status="NEW",
+        )
+        
+        # Update status to COOKING
+        data = {"status": "COOKING"}
+        response = self.client.patch(f"/api/orders/{order.id}/update_status/", data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        order_data = response.json()
+        self.assertEqual(order_data["status"], "COOKING")
+        
+        # Verify in database
+        order.refresh_from_db()
+        self.assertEqual(order.status, "COOKING")
+        
+        # Test invalid status
+        data = {"status": "INVALID"}
+        response = self.client.patch(f"/api/orders/{order.id}/update_status/", data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
