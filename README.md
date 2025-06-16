@@ -88,14 +88,24 @@ familychef/
 
 ## API Endpoints
 
+### Core Endpoints
 - `GET /api/health/` - Health check
 - `GET /admin/` - Django admin interface
 - `GET /api/` - DRF browsable API root
 - `POST /auth/` - Authentication endpoints
 
+### Phase 1 - Core Models & APIs
+- `GET|POST /api/families/` - Family management
+- `GET|POST|PUT|PATCH|DELETE /api/family-members/` - Family membership management
+- `GET|POST|PUT|PATCH|DELETE /api/ingredients/` - Ingredient management
+- `GET|POST|PUT|PATCH|DELETE /api/cuisines/` - Recipe/cuisine management
+- `GET|POST|PUT|PATCH|DELETE /api/recipe-ingredients/` - Recipe ingredient management
+- `GET|POST|PUT|PATCH|DELETE /api/pantry-stock/` - Pantry stock management
+- `GET /api/users/` - User information (read-only, family-scoped)
+
 ## Development
 
-This project follows the roadmap outlined in `Roadmap.md`. Current status: **Phase 0 Setup** ✅
+This project follows the roadmap outlined in `Roadmap.md`. Current status: **Phase 1 Core Models & APIs** ✅
 
 ### Code Quality and CI/CD
 

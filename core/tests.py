@@ -1,6 +1,13 @@
 import json
+from datetime import date, timedelta
+from decimal import Decimal
 
+from django.contrib.auth.models import User
 from django.test import Client, TestCase
+from rest_framework import status
+from rest_framework.test import APITestCase
+
+from .models import Cuisine, Family, FamilyMember, Ingredient, PantryStock, RecipeIngredient
 
 
 class HealthCheckTests(TestCase):
@@ -20,3 +27,205 @@ class HealthCheckTests(TestCase):
         self.assertEqual(data["status"], "ok")
         self.assertEqual(data["message"], "FamilyChef API is running")
         self.assertEqual(data["version"], "1.0.0")
+
+
+class ModelTests(TestCase):
+    """Test the core models"""
+
+    def setUp(self):
+        self.user = User.objects.create_user(username="testuser", email="test@example.com", password="testpass123")
+        self.family = Family.objects.create(name="Test Family")
+        self.ingredient = Ingredient.objects.create(name="Tomato", description="Fresh red tomato")
+
+    def test_family_creation(self):
+        """Test family model creation"""
+        self.assertEqual(self.family.name, "Test Family")
+        self.assertEqual(str(self.family), "Test Family")
+
+    def test_family_member_creation(self):
+        """Test family member relationship"""
+        member = FamilyMember.objects.create(user=self.user, family=self.family, role="chef")
+        self.assertEqual(member.user, self.user)
+        self.assertEqual(member.family, self.family)
+        self.assertEqual(member.role, "chef")
+        self.assertEqual(str(member), "testuser - Test Family (chef)")
+
+    def test_ingredient_creation(self):
+        """Test ingredient model creation"""
+        self.assertEqual(self.ingredient.name, "Tomato")
+        self.assertEqual(self.ingredient.description, "Fresh red tomato")
+        self.assertEqual(str(self.ingredient), "Tomato")
+
+    def test_cuisine_creation(self):
+        """Test cuisine model creation"""
+        cuisine = Cuisine.objects.create(
+            name="Tomato Pasta",
+            description="Delicious tomato pasta",
+            default_time_min=30,
+            created_by=self.user,
+            family=self.family,
+        )
+        self.assertEqual(cuisine.name, "Tomato Pasta")
+        self.assertEqual(cuisine.default_time_min, 30)
+        self.assertEqual(cuisine.created_by, self.user)
+        self.assertEqual(cuisine.family, self.family)
+        self.assertEqual(str(cuisine), "Tomato Pasta (Test Family)")
+
+    def test_recipe_ingredient_creation(self):
+        """Test recipe ingredient relationship"""
+        cuisine = Cuisine.objects.create(
+            name="Tomato Salad", default_time_min=10, created_by=self.user, family=self.family
+        )
+        recipe_ingredient = RecipeIngredient.objects.create(
+            cuisine=cuisine,
+            ingredient=self.ingredient,
+            quantity=Decimal("2.5"),
+            unit="pieces",
+            is_optional=False,
+            is_substitutable=True,
+        )
+        self.assertEqual(recipe_ingredient.cuisine, cuisine)
+        self.assertEqual(recipe_ingredient.ingredient, self.ingredient)
+        self.assertEqual(recipe_ingredient.quantity, Decimal("2.5"))
+        self.assertEqual(recipe_ingredient.unit, "pieces")
+        self.assertFalse(recipe_ingredient.is_optional)
+        self.assertTrue(recipe_ingredient.is_substitutable)
+
+    def test_pantry_stock_creation(self):
+        """Test pantry stock model creation"""
+        stock = PantryStock.objects.create(
+            family=self.family,
+            ingredient=self.ingredient,
+            qty_available=Decimal("10.0"),
+            unit="pieces",
+            best_before=date.today() + timedelta(days=7),
+        )
+        self.assertEqual(stock.family, self.family)
+        self.assertEqual(stock.ingredient, self.ingredient)
+        self.assertEqual(stock.qty_available, Decimal("10.0"))
+        self.assertEqual(stock.unit, "pieces")
+
+
+class APITests(APITestCase):
+    """Test the REST API endpoints"""
+
+    def setUp(self):
+        self.user = User.objects.create_user(username="testuser", email="test@example.com", password="testpass123")
+        self.other_user = User.objects.create_user(
+            username="otheruser", email="other@example.com", password="testpass123"
+        )
+        self.family = Family.objects.create(name="Test Family")
+        self.other_family = Family.objects.create(name="Other Family")
+
+        # Add user to family
+        FamilyMember.objects.create(user=self.user, family=self.family, role="chef")
+        # Add other user to other family
+        FamilyMember.objects.create(user=self.other_user, family=self.other_family, role="member")
+
+        self.ingredient = Ingredient.objects.create(name="Test Ingredient", description="A test ingredient")
+
+    def test_authentication_required(self):
+        """Test that authentication is required for API endpoints"""
+        response = self.client.get("/api/families/")
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_family_list_api(self):
+        """Test family list API with authentication"""
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get("/api/families/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        data = response.json()
+        # Handle pagination
+        if "results" in data:
+            families = data["results"]
+        else:
+            families = data
+
+        self.assertEqual(len(families), 1)  # User should only see their own family
+        self.assertEqual(families[0]["name"], "Test Family")
+
+    def test_family_isolation(self):
+        """Test that users can only see their own families"""
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get("/api/families/")
+        data = response.json()
+
+        # Handle pagination
+        if "results" in data:
+            families = data["results"]
+        else:
+            families = data
+
+        family_names = [f["name"] for f in families]
+
+        self.assertIn("Test Family", family_names)
+        self.assertNotIn("Other Family", family_names)
+
+    def test_ingredient_crud(self):
+        """Test ingredient CRUD operations"""
+        self.client.force_authenticate(user=self.user)
+
+        # Test create
+        data = {"name": "New Ingredient", "description": "A new test ingredient"}
+        response = self.client.post("/api/ingredients/", data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        # Test read
+        response = self.client.get("/api/ingredients/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
+
+        # Handle pagination
+        if "results" in data:
+            ingredients = data["results"]
+        else:
+            ingredients = data
+
+        self.assertTrue(len(ingredients) >= 2)  # At least our test ingredient and new one
+
+        # Test update
+        ingredient_id = ingredients[0]["id"]
+        update_data = {"name": "Updated Ingredient", "description": "Updated description"}
+        response = self.client.patch(f"/api/ingredients/{ingredient_id}/", update_data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # Test delete
+        response = self.client.delete(f"/api/ingredients/{ingredient_id}/")
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+    def test_cuisine_creation(self):
+        """Test cuisine creation through API"""
+        self.client.force_authenticate(user=self.user)
+
+        data = {
+            "name": "Test Cuisine",
+            "description": "A test cuisine",
+            "default_time_min": 25,
+            "family_id": self.family.id,
+        }
+        response = self.client.post("/api/cuisines/", data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        cuisine_data = response.json()
+        self.assertEqual(cuisine_data["name"], "Test Cuisine")
+        self.assertEqual(cuisine_data["default_time_min"], 25)
+        self.assertEqual(cuisine_data["created_by"]["username"], "testuser")
+
+    def test_pantry_stock_operations(self):
+        """Test pantry stock operations"""
+        self.client.force_authenticate(user=self.user)
+
+        data = {
+            "family_id": self.family.id,
+            "ingredient_id": self.ingredient.id,
+            "qty_available": "15.5",
+            "unit": "kg",
+            "best_before": (date.today() + timedelta(days=14)).isoformat(),
+        }
+        response = self.client.post("/api/pantry-stock/", data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        stock_data = response.json()
+        self.assertEqual(float(stock_data["qty_available"]), 15.5)
+        self.assertEqual(stock_data["unit"], "kg")
