@@ -45,6 +45,6 @@ urlpatterns = [
 ]
 
 # Add static files serving for development/testing
-if settings.DEBUG:
+if settings.DEBUG or settings.TESTING:
     urlpatterns += staticfiles_urlpatterns()
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
