@@ -45,10 +45,11 @@ class IngredientSerializer(serializers.ModelSerializer):
 class RecipeIngredientSerializer(serializers.ModelSerializer):
     ingredient = IngredientSerializer(read_only=True)
     ingredient_id = serializers.IntegerField(write_only=True)
+    cuisine_id = serializers.IntegerField(write_only=True)
 
     class Meta:
         model = RecipeIngredient
-        fields = ["id", "ingredient", "quantity", "unit", "is_optional", "is_substitutable", "ingredient_id"]
+        fields = ["id", "ingredient", "quantity", "unit", "is_optional", "is_substitutable", "ingredient_id", "cuisine_id"]
         read_only_fields = ["id"]
 
 
