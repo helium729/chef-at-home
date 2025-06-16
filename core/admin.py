@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Cuisine, Family, FamilyMember, Ingredient, PantryStock, RecipeIngredient
+from .models import Alert, Cuisine, Family, FamilyMember, Ingredient, LowStockThreshold, Order, PantryStock, RecipeIngredient
 
 
 @admin.register(Family)
@@ -45,4 +45,33 @@ class RecipeIngredientAdmin(admin.ModelAdmin):
 class PantryStockAdmin(admin.ModelAdmin):
     list_display = ["family", "ingredient", "qty_available", "unit", "best_before", "updated_at"]
     list_filter = ["family", "unit", "best_before"]
+    search_fields = ["family__name", "ingredient__name"]
+
+
+@admin.register(Order)
+class OrderAdmin(admin.ModelAdmin):
+    list_display = ["id", "family", "cuisine", "created_by", "status", "created_at"]
+    list_filter = ["status", "family", "created_at"]
+    search_fields = ["cuisine__name", "family__name", "created_by__username"]
+
+
+@admin.register(Alert)
+class AlertAdmin(admin.ModelAdmin):
+    list_display = ["family", "ingredient", "alert_type", "is_resolved", "created_at"]
+    list_filter = ["alert_type", "is_resolved", "family"]
+    search_fields = ["family__name", "ingredient__name"]
+    actions = ["mark_resolved"]
+
+    def mark_resolved(self, request, queryset):
+        from django.utils import timezone
+
+        queryset.update(is_resolved=True, resolved_at=timezone.now())
+
+    mark_resolved.short_description = "Mark selected alerts as resolved"
+
+
+@admin.register(LowStockThreshold)
+class LowStockThresholdAdmin(admin.ModelAdmin):
+    list_display = ["family", "ingredient", "threshold_qty", "unit", "updated_at"]
+    list_filter = ["family", "unit"]
     search_fields = ["family__name", "ingredient__name"]

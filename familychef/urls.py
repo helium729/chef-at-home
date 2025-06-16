@@ -24,6 +24,7 @@ def api_health_check(request):
     """Simple health check endpoint"""
     return JsonResponse({"status": "ok", "message": "FamilyChef API is running", "version": "1.0.0"})
 
+
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/", include("core.urls")),

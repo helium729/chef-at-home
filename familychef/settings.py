@@ -15,12 +15,13 @@ import sys
 from datetime import timedelta
 from pathlib import Path
 
+from celery.schedules import crontab
 from dotenv import load_dotenv
 
 load_dotenv()
 
 # Add TESTING flag to detect when running tests
-TESTING = 'test' in sys.argv
+TESTING = "test" in sys.argv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -215,6 +216,14 @@ CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE
+
+# Celery Beat Schedule (Periodic Tasks)
+CELERY_BEAT_SCHEDULE = {
+    "daily-alert-check": {
+        "task": "core.tasks.daily_alert_check",
+        "schedule": crontab(hour=9, minute=0),  # Run daily at 9:00 AM
+    },
+}
 
 # Django Allauth
 AUTHENTICATION_BACKENDS = [
