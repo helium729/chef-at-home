@@ -824,6 +824,13 @@ class AlertTaskTests(TestCase):
 class PWATests(TestCase):
     """Test PWA functionality and features"""
 
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        # Collect static files for testing
+        from django.core.management import call_command
+        call_command('collectstatic', '--noinput', verbosity=0)
+
     def setUp(self):
         self.client = Client()
 
