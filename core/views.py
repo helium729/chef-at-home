@@ -184,10 +184,34 @@ class OrderViewSet(viewsets.ModelViewSet):
         order.status = new_status
         order.save()
         
+        # If status is DONE, deduct ingredients from pantry
+        if new_status == "DONE":
+            self._deduct_ingredients_from_pantry(order)
+        
         # Send WebSocket notification
         serializer = self.get_serializer(order)
         send_order_update(order.family.id, serializer.data)
         
-        # TODO: If status is DONE, deduct ingredients from pantry
-        
         return Response(serializer.data)
+    
+    def _deduct_ingredients_from_pantry(self, order):
+        """Deduct used ingredients from pantry when order is completed"""
+        for order_ingredient in order.order_ingredients.all():
+            try:
+                pantry_stock = PantryStock.objects.get(
+                    family=order.family,
+                    ingredient=order_ingredient.ingredient
+                )
+                
+                # Deduct the used quantity
+                pantry_stock.qty_available -= order_ingredient.quantity
+                
+                # Ensure we don't go negative
+                if pantry_stock.qty_available < 0:
+                    pantry_stock.qty_available = 0
+                    
+                pantry_stock.save()
+                
+            except PantryStock.DoesNotExist:
+                # If ingredient doesn't exist in pantry, skip
+                continue

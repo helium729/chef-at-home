@@ -8,7 +8,7 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from .models import Cuisine, Family, FamilyMember, Ingredient, Order, PantryStock, RecipeIngredient
+from .models import Cuisine, Family, FamilyMember, Ingredient, Order, OrderItemIngredient, PantryStock, RecipeIngredient
 
 
 class HealthCheckTests(TestCase):
@@ -369,3 +369,56 @@ class APITests(APITestCase):
         data = {"status": "INVALID"}
         response = self.client.patch(f"/api/orders/{order.id}/update_status/", data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_ingredient_deduction_on_order_completion(self):
+        """Test that ingredients are deducted from pantry when order is marked as DONE"""
+        self.client.force_authenticate(user=self.user)
+        
+        # Create cuisine with ingredients
+        cuisine = Cuisine.objects.create(
+            name="Deduction Test Dish",
+            default_time_min=25,
+            created_by=self.user,
+            family=self.family,
+        )
+        
+        # Add ingredient to cuisine
+        RecipeIngredient.objects.create(
+            cuisine=cuisine,
+            ingredient=self.ingredient,
+            quantity=Decimal("3.0"),
+            unit="pieces",
+        )
+        
+        # Add stock to pantry
+        pantry_stock = PantryStock.objects.create(
+            family=self.family,
+            ingredient=self.ingredient,
+            qty_available=Decimal("10.0"),
+            unit="pieces",
+        )
+        
+        # Create order
+        order = Order.objects.create(
+            family=self.family,
+            cuisine=cuisine,
+            created_by=self.user,
+            status="NEW",
+        )
+        
+        # Create order ingredient (this would normally be done automatically)
+        OrderItemIngredient.objects.create(
+            order=order,
+            ingredient=self.ingredient,
+            quantity=Decimal("3.0"),
+            unit="pieces",
+        )
+        
+        # Mark order as DONE
+        data = {"status": "DONE"}
+        response = self.client.patch(f"/api/orders/{order.id}/update_status/", data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        # Check that ingredients were deducted
+        pantry_stock.refresh_from_db()
+        self.assertEqual(pantry_stock.qty_available, Decimal("7.0"))  # 10 - 3 = 7
