@@ -18,6 +18,9 @@ Including another URLconf
 from django.contrib import admin
 from django.http import JsonResponse
 from django.urls import include, path
+from django.conf import settings
+from django.contrib.staticfiles.urls import staticfiles_urlpatterns
+from django.conf.urls.static import static
 
 from core.views import home, chef_board, pantry, shopping_list_view, pwa_manifest
 
@@ -40,3 +43,8 @@ urlpatterns = [
     path("shopping/", shopping_list_view, name="shopping_list"),
     path("manifest.json", pwa_manifest, name="pwa_manifest"),
 ]
+
+# Add static files serving for development/testing
+if settings.DEBUG:
+    urlpatterns += staticfiles_urlpatterns()
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

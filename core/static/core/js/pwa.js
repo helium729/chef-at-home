@@ -116,6 +116,7 @@ class FamilyChefPWA {
 
     setupInstallPrompt() {
         let deferredPrompt;
+        let installPrompt = null; // PWA install prompt event reference
         
         window.addEventListener('beforeinstallprompt', (e) => {
             // Prevent Chrome 67 and earlier from automatically showing the prompt
@@ -123,6 +124,7 @@ class FamilyChefPWA {
             
             // Stash the event so it can be triggered later
             deferredPrompt = e;
+            installPrompt = e; // Store reference for installPrompt functionality
             
             // Show install button
             this.showInstallButton(deferredPrompt);
