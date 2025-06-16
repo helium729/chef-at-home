@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Alert, Cuisine, Family, FamilyMember, Ingredient, LowStockThreshold, Order, PantryStock, RecipeIngredient
+from .models import Alert, Cuisine, Family, FamilyMember, Ingredient, LowStockThreshold, Order, PantryStock, RecipeIngredient, ShoppingList
 
 
 @admin.register(Family)
@@ -75,3 +75,21 @@ class LowStockThresholdAdmin(admin.ModelAdmin):
     list_display = ["family", "ingredient", "threshold_qty", "unit", "updated_at"]
     list_filter = ["family", "unit"]
     search_fields = ["family__name", "ingredient__name"]
+
+
+@admin.register(ShoppingList)
+class ShoppingListAdmin(admin.ModelAdmin):
+    list_display = ["family", "ingredient", "qty_needed", "unit", "is_resolved", "created_at"]
+    list_filter = ["family", "unit", "resolved_at"]
+    search_fields = ["family__name", "ingredient__name"]
+    actions = ["mark_resolved"]
+
+    def is_resolved(self, obj):
+        return obj.is_resolved
+    is_resolved.boolean = True
+    is_resolved.short_description = "Resolved"
+
+    def mark_resolved(self, request, queryset):
+        from django.utils import timezone
+        queryset.update(resolved_at=timezone.now())
+    mark_resolved.short_description = "Mark selected items as resolved"

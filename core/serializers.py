@@ -12,6 +12,7 @@ from .models import (
     OrderItemIngredient,
     PantryStock,
     RecipeIngredient,
+    ShoppingList,
 )
 
 
@@ -60,7 +61,10 @@ class RecipeIngredientSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = RecipeIngredient
-        fields = ["id", "ingredient", "quantity", "unit", "is_optional", "is_substitutable", "ingredient_id", "cuisine_id"]
+        fields = [
+            "id", "ingredient", "quantity", "unit", "is_optional",
+            "is_substitutable", "ingredient_id", "cuisine_id"
+        ]
         read_only_fields = ["id"]
 
 
@@ -219,3 +223,27 @@ class LowStockThresholdSerializer(serializers.ModelSerializer):
             "ingredient_id",
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
+
+
+class ShoppingListSerializer(serializers.ModelSerializer):
+    ingredient = IngredientSerializer(read_only=True)
+    family = FamilySerializer(read_only=True)
+    ingredient_id = serializers.IntegerField(write_only=True)
+    family_id = serializers.IntegerField(write_only=True)
+    is_resolved = serializers.ReadOnlyField()
+
+    class Meta:
+        model = ShoppingList
+        fields = [
+            "id",
+            "family",
+            "ingredient",
+            "qty_needed",
+            "unit",
+            "created_at",
+            "resolved_at",
+            "is_resolved",
+            "family_id",
+            "ingredient_id",
+        ]
+        read_only_fields = ["id", "created_at", "resolved_at"]

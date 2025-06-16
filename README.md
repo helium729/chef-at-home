@@ -116,9 +116,16 @@ familychef/
 - Automated ingredient deduction when orders are completed
 - Celery tasks for daily low-stock and expiry checking
 
+### Phase 4 - Shopping List
+- `GET|POST|PUT|PATCH|DELETE /api/shopping-list/` - Shopping list management
+- `PATCH /api/shopping-list/{id}/resolve/` - Mark shopping list items as resolved
+- Automatic shopping list generation from low-stock and expired ingredient alerts
+- WebSocket: `/ws/shopping/{family_id}/` - Real-time shopping list updates
+- Celery task for daily shopping list generation
+
 ## Development
 
-This project follows the roadmap outlined in `Roadmap.md`. Current status: **Phase 3 Chef & Pantry** ✅
+This project follows the roadmap outlined in `Roadmap.md`. Current status: **Phase 4 Shopping List** ✅
 
 ### Code Quality and CI/CD
 

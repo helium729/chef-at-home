@@ -3,10 +3,11 @@ Celery tasks for background processing
 """
 
 from datetime import date, timedelta
+from decimal import Decimal
 
 from celery import shared_task
 
-from .models import Alert, Family, LowStockThreshold, PantryStock
+from .models import Alert, Family, LowStockThreshold, PantryStock, ShoppingList
 
 
 @shared_task
@@ -75,7 +76,8 @@ def check_expired_items():
             # For items expiring soon, we'll still use EXPIRED type but with different message
             days_until_expiry = (item.best_before - today).days
             alert_type = "EXPIRED"
-            message = f"Expiring soon: {item.ingredient.name} expires in {days_until_expiry} day(s) on {item.best_before}"
+            message = (f"Expiring soon: {item.ingredient.name} expires in "
+                       f"{days_until_expiry} day(s) on {item.best_before}")
 
         # Check if there's already an active alert for this item
         existing_alert = Alert.objects.filter(
@@ -98,3 +100,71 @@ def daily_alert_check():
     expiry_result = check_expired_items()
 
     return f"Daily alert check completed. {low_stock_result}. {expiry_result}."
+
+
+@shared_task
+def generate_shopping_lists():
+    """
+    Generate shopping lists from active alerts
+    """
+    items_created = 0
+
+    # Get all families
+    families = Family.objects.all()
+
+    for family in families:
+        # Get all active low stock and expired alerts for this family
+        active_alerts = Alert.objects.filter(family=family, is_resolved=False)
+
+        for alert in active_alerts:
+            # Check if there's already a shopping list item for this ingredient
+            existing_item = ShoppingList.objects.filter(
+                family=family, ingredient=alert.ingredient, resolved_at__isnull=True
+            ).first()
+
+            if existing_item:
+                # Update quantity if there's a specific need (for now, skip)
+                continue
+
+            # Determine quantity needed based on alert type
+            if alert.alert_type == "LOW_STOCK":
+                # Try to get the threshold to know how much to buy
+                try:
+                    threshold = LowStockThreshold.objects.get(family=family, ingredient=alert.ingredient)
+                    # Buy enough to reach threshold + 50% buffer
+                    current_stock = PantryStock.objects.get(family=family, ingredient=alert.ingredient)
+                    qty_needed = (threshold.threshold_qty * Decimal("1.5")) - current_stock.qty_available
+                    unit = threshold.unit
+                except (LowStockThreshold.DoesNotExist, PantryStock.DoesNotExist):
+                    # Default to buying 1 unit if we can't determine specifics
+                    qty_needed = Decimal("1.0")
+                    unit = "unit"
+            else:  # EXPIRED
+                # For expired items, buy a standard replacement amount
+                try:
+                    expired_stock = PantryStock.objects.get(family=family, ingredient=alert.ingredient)
+                    qty_needed = expired_stock.qty_available  # Replace the expired amount
+                    unit = expired_stock.unit
+                except PantryStock.DoesNotExist:
+                    qty_needed = Decimal("1.0")
+                    unit = "unit"
+
+            # Ensure positive quantity
+            if qty_needed > 0:
+                ShoppingList.objects.create(
+                    family=family, ingredient=alert.ingredient, qty_needed=qty_needed, unit=unit
+                )
+                items_created += 1
+
+    return f"Generated {items_created} shopping list items"
+
+
+@shared_task
+def daily_shopping_list_generation():
+    """
+    Combined daily task to generate shopping lists after alert checks
+    """
+    alert_result = daily_alert_check()
+    shopping_result = generate_shopping_lists()
+
+    return f"Daily tasks completed. {alert_result} {shopping_result}"

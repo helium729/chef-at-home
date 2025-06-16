@@ -15,6 +15,7 @@ from .models import (
     OrderItemIngredient,
     PantryStock,
     RecipeIngredient,
+    ShoppingList,
 )
 from .serializers import (
     AlertSerializer,
@@ -27,6 +28,7 @@ from .serializers import (
     OrderSerializer,
     PantryStockSerializer,
     RecipeIngredientSerializer,
+    ShoppingListSerializer,
     UserSerializer,
 )
 from .utils import send_order_update
@@ -267,3 +269,33 @@ class LowStockThresholdViewSet(viewsets.ModelViewSet):
         # Users can only see thresholds from their families
         user_families = FamilyMember.objects.filter(user=self.request.user).values_list("family", flat=True)
         return LowStockThreshold.objects.filter(family__in=user_families)
+
+
+class ShoppingListViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for managing shopping list items
+    """
+
+    queryset = ShoppingList.objects.all()
+    serializer_class = ShoppingListSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        # Users can only see shopping list items from their families
+        user_families = FamilyMember.objects.filter(user=self.request.user).values_list("family", flat=True)
+        return ShoppingList.objects.filter(family__in=user_families)
+
+    @action(detail=True, methods=["patch"])
+    def resolve(self, request, pk=None):
+        """Mark a shopping list item as resolved"""
+        shopping_item = self.get_object()
+        shopping_item.resolved_at = timezone.now()
+        shopping_item.save()
+
+        serializer = self.get_serializer(shopping_item)
+
+        # Send WebSocket notification
+        from .utils import send_shopping_list_update
+        send_shopping_list_update(shopping_item.family.id, serializer.data)
+
+        return Response(serializer.data)

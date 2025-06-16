@@ -203,3 +203,30 @@ class LowStockThreshold(models.Model):
 
     def __str__(self):
         return f"{self.family.name} - {self.ingredient.name}: Alert when < {self.threshold_qty} {self.unit}"
+
+
+class ShoppingList(models.Model):
+    """Shopping list items that need to be purchased"""
+
+    family = models.ForeignKey(Family, on_delete=models.CASCADE)
+    ingredient = models.ForeignKey(Ingredient, on_delete=models.CASCADE)
+    qty_needed = models.DecimalField(max_digits=10, decimal_places=2)
+    unit = models.CharField(max_length=20)
+    created_at = models.DateTimeField(auto_now_add=True)
+    resolved_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        unique_together = ["family", "ingredient"]
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["family", "resolved_at"]),
+        ]
+
+    @property
+    def is_resolved(self):
+        """Check if this shopping list item has been resolved"""
+        return self.resolved_at is not None
+
+    def __str__(self):
+        status = "Resolved" if self.is_resolved else "Pending"
+        return f"{self.family.name} - {self.qty_needed} {self.unit} {self.ingredient.name} ({status})"
