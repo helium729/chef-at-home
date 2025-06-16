@@ -293,9 +293,9 @@ class ShoppingListViewSet(viewsets.ModelViewSet):
         shopping_item.save()
 
         serializer = self.get_serializer(shopping_item)
-        
+
         # Send WebSocket notification
         from .utils import send_shopping_list_update
         send_shopping_list_update(shopping_item.family.id, serializer.data)
-        
+
         return Response(serializer.data)

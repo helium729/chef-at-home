@@ -76,7 +76,8 @@ def check_expired_items():
             # For items expiring soon, we'll still use EXPIRED type but with different message
             days_until_expiry = (item.best_before - today).days
             alert_type = "EXPIRED"
-            message = f"Expiring soon: {item.ingredient.name} expires in {days_until_expiry} day(s) on {item.best_before}"
+            message = (f"Expiring soon: {item.ingredient.name} expires in "
+                       f"{days_until_expiry} day(s) on {item.best_before}")
 
         # Check if there's already an active alert for this item
         existing_alert = Alert.objects.filter(
