@@ -19,6 +19,7 @@ from .models import (
     OrderItemIngredient,
     PantryStock,
     RecipeIngredient,
+    ShoppingList,
 )
 
 
@@ -114,6 +115,41 @@ class ModelTests(TestCase):
         self.assertEqual(stock.ingredient, self.ingredient)
         self.assertEqual(stock.qty_available, Decimal("10.0"))
         self.assertEqual(stock.unit, "pieces")
+
+    def test_shopping_list_creation(self):
+        """Test shopping list model creation"""
+        shopping_item = ShoppingList.objects.create(
+            family=self.family,
+            ingredient=self.ingredient,
+            qty_needed=Decimal("5.0"),
+            unit="kg",
+        )
+        self.assertEqual(shopping_item.family, self.family)
+        self.assertEqual(shopping_item.ingredient, self.ingredient)
+        self.assertEqual(shopping_item.qty_needed, Decimal("5.0"))
+        self.assertEqual(shopping_item.unit, "kg")
+        self.assertFalse(shopping_item.is_resolved)
+        self.assertIsNone(shopping_item.resolved_at)
+
+    def test_shopping_list_resolve(self):
+        """Test shopping list item resolution"""
+        shopping_item = ShoppingList.objects.create(
+            family=self.family,
+            ingredient=self.ingredient,
+            qty_needed=Decimal("3.0"),
+            unit="pieces",
+        )
+        
+        # Initially not resolved
+        self.assertFalse(shopping_item.is_resolved)
+        
+        # Resolve the item
+        shopping_item.resolved_at = timezone.now()
+        shopping_item.save()
+        
+        # Should now be resolved
+        self.assertTrue(shopping_item.is_resolved)
+        self.assertIsNotNone(shopping_item.resolved_at)
 
 
 class APITests(APITestCase):
@@ -429,6 +465,178 @@ class APITests(APITestCase):
         # Check that ingredients were deducted
         pantry_stock.refresh_from_db()
         self.assertEqual(pantry_stock.qty_available, Decimal("7.0"))  # 10 - 3 = 7
+
+    def test_shopping_list_crud(self):
+        """Test shopping list CRUD operations"""
+        self.client.force_authenticate(user=self.user)
+
+        # Create shopping list item
+        data = {
+            "family_id": self.family.id,
+            "ingredient_id": self.ingredient.id,
+            "qty_needed": "5.0",
+            "unit": "kg",
+        }
+        response = self.client.post("/api/shopping-list/", data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        shopping_item_id = response.json()["id"]
+
+        # Read shopping list item
+        response = self.client.get(f"/api/shopping-list/{shopping_item_id}/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(float(response.json()["qty_needed"]), 5.0)
+        self.assertFalse(response.json()["is_resolved"])
+
+        # Update shopping list item
+        data = {"qty_needed": "7.0"}
+        response = self.client.patch(f"/api/shopping-list/{shopping_item_id}/", data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(float(response.json()["qty_needed"]), 7.0)
+
+        # Resolve shopping list item
+        response = self.client.patch(f"/api/shopping-list/{shopping_item_id}/resolve/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.json()["is_resolved"])
+        self.assertIsNotNone(response.json()["resolved_at"])
+
+    def test_shopping_list_family_isolation(self):
+        """Test that users can only see shopping list items from their families"""
+        self.client.force_authenticate(user=self.user)
+
+        # Create shopping list item for user's family
+        shopping_item = ShoppingList.objects.create(
+            family=self.family,
+            ingredient=self.ingredient,
+            qty_needed=Decimal("5.0"),
+            unit="kg",
+        )
+
+        # Create shopping list item for other family
+        other_shopping_item = ShoppingList.objects.create(
+            family=self.other_family,
+            ingredient=self.ingredient,
+            qty_needed=Decimal("3.0"),
+            unit="pieces",
+        )
+
+        # User should only see their family's shopping list item
+        response = self.client.get("/api/shopping-list/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        items = response.json()["results"]
+        self.assertEqual(len(items), 1)
+        self.assertEqual(items[0]["id"], shopping_item.id)
+
+
+class ShoppingListTaskTests(TestCase):
+    """Test shopping list generation tasks"""
+
+    def setUp(self):
+        self.user = User.objects.create_user(username="testuser", email="test@example.com", password="testpass123")
+        self.family = Family.objects.create(name="Test Family")
+        self.ingredient = Ingredient.objects.create(name="Tomato", description="Fresh red tomato")
+
+    def test_shopping_list_generation_from_low_stock_alert(self):
+        """Test that shopping list items are generated from low stock alerts"""
+        # Create low stock threshold
+        threshold = LowStockThreshold.objects.create(
+            family=self.family,
+            ingredient=self.ingredient,
+            threshold_qty=Decimal("5.0"),
+            unit="kg",
+        )
+
+        # Create pantry stock below threshold
+        PantryStock.objects.create(
+            family=self.family,
+            ingredient=self.ingredient,
+            qty_available=Decimal("2.0"),
+            unit="kg",
+        )
+
+        # Create low stock alert
+        Alert.objects.create(
+            family=self.family,
+            ingredient=self.ingredient,
+            alert_type="LOW_STOCK",
+            message="Low stock alert",
+        )
+
+        # Import and run the task
+        from .tasks import generate_shopping_lists
+
+        result = generate_shopping_lists()
+
+        # Check that shopping list item was created
+        shopping_items = ShoppingList.objects.filter(family=self.family, ingredient=self.ingredient)
+        self.assertEqual(shopping_items.count(), 1)
+
+        shopping_item = shopping_items.first()
+        self.assertEqual(shopping_item.family, self.family)
+        self.assertEqual(shopping_item.ingredient, self.ingredient)
+        # Should buy enough to reach 1.5 * threshold - current = 1.5 * 5 - 2 = 5.5
+        self.assertEqual(shopping_item.qty_needed, Decimal("5.5"))
+        self.assertEqual(shopping_item.unit, "kg")
+
+    def test_shopping_list_generation_from_expired_alert(self):
+        """Test that shopping list items are generated from expired alerts"""
+        # Create expired pantry stock
+        PantryStock.objects.create(
+            family=self.family,
+            ingredient=self.ingredient,
+            qty_available=Decimal("3.0"),
+            unit="pieces",
+            best_before=date.today() - timedelta(days=1),
+        )
+
+        # Create expired alert
+        Alert.objects.create(
+            family=self.family,
+            ingredient=self.ingredient,
+            alert_type="EXPIRED",
+            message="Expired item alert",
+        )
+
+        # Import and run the task
+        from .tasks import generate_shopping_lists
+
+        result = generate_shopping_lists()
+
+        # Check that shopping list item was created
+        shopping_items = ShoppingList.objects.filter(family=self.family, ingredient=self.ingredient)
+        self.assertEqual(shopping_items.count(), 1)
+
+        shopping_item = shopping_items.first()
+        self.assertEqual(shopping_item.qty_needed, Decimal("3.0"))  # Replace expired amount
+        self.assertEqual(shopping_item.unit, "pieces")
+
+    def test_no_duplicate_shopping_list_items(self):
+        """Test that duplicate shopping list items are not created"""
+        # Create alert
+        Alert.objects.create(
+            family=self.family,
+            ingredient=self.ingredient,
+            alert_type="LOW_STOCK",
+            message="Low stock alert",
+        )
+
+        # Create existing shopping list item
+        ShoppingList.objects.create(
+            family=self.family,
+            ingredient=self.ingredient,
+            qty_needed=Decimal("5.0"),
+            unit="kg",
+        )
+
+        # Import and run the task
+        from .tasks import generate_shopping_lists
+
+        result = generate_shopping_lists()
+
+        # Should still only have one shopping list item
+        shopping_items = ShoppingList.objects.filter(family=self.family, ingredient=self.ingredient)
+        self.assertEqual(shopping_items.count(), 1)
 
 
 class AlertTests(TestCase):

@@ -15,6 +15,7 @@ router.register(r"menu", views.MenuViewSet, basename="menu")
 router.register(r"orders", views.OrderViewSet)
 router.register(r"alerts", views.AlertViewSet)
 router.register(r"low-stock-thresholds", views.LowStockThresholdViewSet)
+router.register(r"shopping-list", views.ShoppingListViewSet)
 
 urlpatterns = [
     path("", include(router.urls)),

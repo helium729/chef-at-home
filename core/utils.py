@@ -18,3 +18,20 @@ def send_order_update(family_id, order_data):
         except Exception:
             # Silently fail if Redis is not available (e.g., during testing)
             pass
+
+
+def send_shopping_list_update(family_id, shopping_item_data):
+    """Send shopping list update to WebSocket group"""
+    # Skip WebSocket notifications during testing
+    if settings.TESTING:
+        return
+
+    channel_layer = get_channel_layer()
+    if channel_layer:
+        try:
+            async_to_sync(channel_layer.group_send)(
+                f"shopping_{family_id}", {"type": "shopping_list_update", "message": {"action": "shopping_list_updated", "item": shopping_item_data}}
+            )
+        except Exception:
+            # Silently fail if Redis is not available (e.g., during testing)
+            pass
