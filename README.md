@@ -105,7 +105,7 @@ familychef/
 
 ## Development
 
-This project follows the roadmap outlined in `Roadmap.md`. Current status: **Phase 1 Core Models & APIs** ✅
+This project follows the roadmap outlined in `Roadmap.md`. Current status: **Phase 2 Ordering Flow** ✅
 
 ### Code Quality and CI/CD
 

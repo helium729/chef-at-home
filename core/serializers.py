@@ -1,7 +1,7 @@
 from django.contrib.auth.models import User
 from rest_framework import serializers
 
-from .models import Cuisine, Family, FamilyMember, Ingredient, PantryStock, RecipeIngredient
+from .models import Cuisine, Family, FamilyMember, Ingredient, Order, OrderItemIngredient, PantryStock, RecipeIngredient
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -80,6 +80,31 @@ class CuisineSerializer(serializers.ModelSerializer):
         return super().create(validated_data)
 
 
+class MenuCuisineSerializer(serializers.ModelSerializer):
+    """Serializer for menu display with availability information"""
+    recipe_ingredients = RecipeIngredientSerializer(many=True, read_only=True)
+    created_by = UserSerializer(read_only=True)
+    is_available = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Cuisine
+        fields = [
+            "id",
+            "name", 
+            "description",
+            "default_time_min",
+            "created_by",
+            "created_at",
+            "updated_at",
+            "recipe_ingredients",
+            "is_available",
+        ]
+        read_only_fields = ["id", "created_at", "updated_at", "created_by"]
+    
+    def get_is_available(self, obj):
+        return obj.is_available()
+
+
 class PantryStockSerializer(serializers.ModelSerializer):
     ingredient = IngredientSerializer(read_only=True)
     family = FamilySerializer(read_only=True)
@@ -101,3 +126,43 @@ class PantryStockSerializer(serializers.ModelSerializer):
             "ingredient_id",
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
+
+
+class OrderItemIngredientSerializer(serializers.ModelSerializer):
+    ingredient = IngredientSerializer(read_only=True)
+    ingredient_id = serializers.IntegerField(write_only=True)
+    
+    class Meta:
+        model = OrderItemIngredient
+        fields = ["id", "ingredient", "quantity", "unit", "ingredient_id"]
+        read_only_fields = ["id"]
+
+
+class OrderSerializer(serializers.ModelSerializer):
+    order_ingredients = OrderItemIngredientSerializer(many=True, read_only=True)
+    created_by = UserSerializer(read_only=True)
+    family = FamilySerializer(read_only=True)
+    cuisine = CuisineSerializer(read_only=True)
+    family_id = serializers.IntegerField(write_only=True)
+    cuisine_id = serializers.IntegerField(write_only=True)
+    
+    class Meta:
+        model = Order
+        fields = [
+            "id",
+            "family",
+            "cuisine", 
+            "created_by",
+            "status",
+            "scheduled_for",
+            "created_at",
+            "updated_at",
+            "order_ingredients",
+            "family_id",
+            "cuisine_id",
+        ]
+        read_only_fields = ["id", "created_at", "updated_at", "created_by"]
+    
+    def create(self, validated_data):
+        validated_data["created_by"] = self.context["request"].user
+        return super().create(validated_data)

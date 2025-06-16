@@ -11,6 +11,8 @@ router.register(r"ingredients", views.IngredientViewSet)
 router.register(r"cuisines", views.CuisineViewSet)
 router.register(r"recipe-ingredients", views.RecipeIngredientViewSet)
 router.register(r"pantry-stock", views.PantryStockViewSet)
+router.register(r"menu", views.MenuViewSet, basename="menu")
+router.register(r"orders", views.OrderViewSet)
 
 urlpatterns = [
     path("", include(router.urls)),

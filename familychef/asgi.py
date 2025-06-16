@@ -20,8 +20,8 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "familychef.settings")
 # is populated before importing code that may import ORM models.
 django_asgi_app = get_asgi_application()
 
-# Import websocket routing (will be created later)
-# from familychef import routing
+# Import websocket routing
+from core import routing
 
 application = ProtocolTypeRouter(
     {
@@ -29,10 +29,7 @@ application = ProtocolTypeRouter(
         "websocket": AllowedHostsOriginValidator(
             AuthMiddlewareStack(
                 URLRouter(
-                    [
-                        # Add WebSocket URL patterns here later
-                        # path("ws/", routing.websocket_urlpatterns),
-                    ]
+                    routing.websocket_urlpatterns
                 )
             )
         ),

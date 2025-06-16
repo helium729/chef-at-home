@@ -66,6 +66,33 @@ class Cuisine(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.family.name})"
+    
+    def is_available(self):
+        """Check if this cuisine can be made with current pantry stock"""
+        for recipe_ingredient in self.recipe_ingredients.all():
+            if recipe_ingredient.is_optional:
+                continue
+                
+            try:
+                pantry_stock = PantryStock.objects.get(
+                    family=self.family,
+                    ingredient=recipe_ingredient.ingredient
+                )
+                
+                # Simple unit comparison - assumes same units for now
+                # TODO: Add unit conversion logic
+                if pantry_stock.qty_available < recipe_ingredient.quantity:
+                    # Check if there's a substitutable ingredient available
+                    if not recipe_ingredient.is_substitutable:
+                        return False
+                    # TODO: Add substitution logic
+                    
+            except PantryStock.DoesNotExist:
+                if not recipe_ingredient.is_substitutable:
+                    return False
+                # TODO: Add substitution logic
+                
+        return True
 
 
 class RecipeIngredient(models.Model):
@@ -101,3 +128,36 @@ class PantryStock(models.Model):
 
     def __str__(self):
         return f"{self.family.name}: {self.qty_available} {self.unit} {self.ingredient.name}"
+
+
+class Order(models.Model):
+    """Order placed by family member for a specific cuisine"""
+    
+    STATUS_CHOICES = [
+        ("NEW", "New"),
+        ("COOKING", "Cooking"),
+        ("DONE", "Done"),
+    ]
+    
+    family = models.ForeignKey(Family, on_delete=models.CASCADE)
+    cuisine = models.ForeignKey(Cuisine, on_delete=models.CASCADE)
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="NEW")
+    scheduled_for = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return f"Order #{self.id}: {self.cuisine.name} for {self.family.name} ({self.status})"
+
+
+class OrderItemIngredient(models.Model):
+    """Snapshot of ingredients used in an order for historical accuracy"""
+    
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="order_ingredients")
+    ingredient = models.ForeignKey(Ingredient, on_delete=models.CASCADE)
+    quantity = models.DecimalField(max_digits=10, decimal_places=2)
+    unit = models.CharField(max_length=20)
+    
+    def __str__(self):
+        return f"Order #{self.order.id}: {self.quantity} {self.unit} {self.ingredient.name}"
