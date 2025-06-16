@@ -10,7 +10,7 @@ class OrderConsumer(AsyncWebsocketConsumer):
         
         # Check if user is authenticated and belongs to the family
         user = self.scope["user"]
-        if user == AnonymousUser():
+        if not user.is_authenticated:
             await self.close()
             return
             
