@@ -19,6 +19,8 @@ from django.contrib import admin
 from django.http import JsonResponse
 from django.urls import include, path
 
+from core.views import home, chef_board, pantry, shopping_list_view, pwa_manifest
+
 
 def api_health_check(request):
     """Simple health check endpoint"""
@@ -31,4 +33,10 @@ urlpatterns = [
     path("api/health/", api_health_check, name="api_health"),
     path("api-auth/", include("rest_framework.urls")),
     path("auth/", include("allauth.urls")),
+    # PWA template views
+    path("", home, name="home"),
+    path("chef/", chef_board, name="chef_board"),
+    path("pantry/", pantry, name="pantry"),
+    path("shopping/", shopping_list_view, name="shopping_list"),
+    path("manifest.json", pwa_manifest, name="pwa_manifest"),
 ]
