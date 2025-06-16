@@ -18,21 +18,15 @@ Including another URLconf
 from django.contrib import admin
 from django.http import JsonResponse
 from django.urls import include, path
-from rest_framework.routers import DefaultRouter
 
 
 def api_health_check(request):
     """Simple health check endpoint"""
     return JsonResponse({"status": "ok", "message": "FamilyChef API is running", "version": "1.0.0"})
 
-
-# Setup API router for future use
-router = DefaultRouter()
-
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path("api/", include(router.urls)),
-    path("api/core/", include("core.urls")),
+    path("api/", include("core.urls")),
     path("api/health/", api_health_check, name="api_health"),
     path("api-auth/", include("rest_framework.urls")),
     path("auth/", include("allauth.urls")),
