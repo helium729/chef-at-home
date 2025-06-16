@@ -8,7 +8,18 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from .models import Cuisine, Family, FamilyMember, Ingredient, Order, OrderItemIngredient, PantryStock, RecipeIngredient
+from .models import (
+    Alert,
+    Cuisine,
+    Family,
+    FamilyMember,
+    Ingredient,
+    LowStockThreshold,
+    Order,
+    OrderItemIngredient,
+    PantryStock,
+    RecipeIngredient,
+)
 
 
 class HealthCheckTests(TestCase):
@@ -74,9 +85,7 @@ class ModelTests(TestCase):
 
     def test_recipe_ingredient_creation(self):
         """Test recipe ingredient relationship"""
-        cuisine = Cuisine.objects.create(
-            name="Tomato Salad", default_time_min=10, created_by=self.user, family=self.family
-        )
+        cuisine = Cuisine.objects.create(name="Tomato Salad", default_time_min=10, created_by=self.user, family=self.family)
         recipe_ingredient = RecipeIngredient.objects.create(
             cuisine=cuisine,
             ingredient=self.ingredient,
@@ -112,9 +121,7 @@ class APITests(APITestCase):
 
     def setUp(self):
         self.user = User.objects.create_user(username="testuser", email="test@example.com", password="testpass123")
-        self.other_user = User.objects.create_user(
-            username="otheruser", email="other@example.com", password="testpass123"
-        )
+        self.other_user = User.objects.create_user(username="otheruser", email="other@example.com", password="testpass123")
         self.family = Family.objects.create(name="Test Family")
         self.other_family = Family.objects.create(name="Other Family")
 
@@ -234,7 +241,7 @@ class APITests(APITestCase):
     def test_menu_availability(self):
         """Test menu endpoint shows availability information"""
         self.client.force_authenticate(user=self.user)
-        
+
         # Create a cuisine with ingredients
         cuisine = Cuisine.objects.create(
             name="Test Dish",
@@ -243,7 +250,7 @@ class APITests(APITestCase):
             created_by=self.user,
             family=self.family,
         )
-        
+
         # Add ingredient requirement
         RecipeIngredient.objects.create(
             cuisine=cuisine,
@@ -252,21 +259,21 @@ class APITests(APITestCase):
             unit="pieces",
             is_optional=False,
         )
-        
+
         # Test without stock - should be unavailable
         response = self.client.get("/api/menu/")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        
+
         data = response.json()
         if "results" in data:
             menu_items = data["results"]
         else:
             menu_items = data
-            
+
         dish = next((item for item in menu_items if item["name"] == "Test Dish"), None)
         self.assertIsNotNone(dish)
         self.assertFalse(dish["is_available"])
-        
+
         # Add sufficient stock
         PantryStock.objects.create(
             family=self.family,
@@ -274,17 +281,17 @@ class APITests(APITestCase):
             qty_available=Decimal("5.0"),
             unit="pieces",
         )
-        
+
         # Test with stock - should be available
         response = self.client.get("/api/menu/")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        
+
         data = response.json()
         if "results" in data:
             menu_items = data["results"]
         else:
             menu_items = data
-            
+
         dish = next((item for item in menu_items if item["name"] == "Test Dish"), None)
         self.assertIsNotNone(dish)
         self.assertTrue(dish["is_available"])
@@ -292,7 +299,7 @@ class APITests(APITestCase):
     def test_order_creation(self):
         """Test order creation"""
         self.client.force_authenticate(user=self.user)
-        
+
         # Create a cuisine
         cuisine = Cuisine.objects.create(
             name="Test Order Dish",
@@ -301,7 +308,7 @@ class APITests(APITestCase):
             created_by=self.user,
             family=self.family,
         )
-        
+
         # Add ingredient to the cuisine
         RecipeIngredient.objects.create(
             cuisine=cuisine,
@@ -309,7 +316,7 @@ class APITests(APITestCase):
             quantity=Decimal("3.0"),
             unit="pieces",
         )
-        
+
         # Create order
         data = {
             "family_id": self.family.id,
@@ -318,17 +325,17 @@ class APITests(APITestCase):
         }
         response = self.client.post("/api/orders/", data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        
+
         order_data = response.json()
         self.assertEqual(order_data["status"], "NEW")
         self.assertEqual(order_data["cuisine"]["name"], "Test Order Dish")
         self.assertEqual(order_data["created_by"]["username"], "testuser")
-        
+
         # Check that OrderItemIngredient was created
         order_id = order_data["id"]
         order = Order.objects.get(id=order_id)
         self.assertEqual(order.order_ingredients.count(), 1)
-        
+
         order_ingredient = order.order_ingredients.first()
         self.assertEqual(order_ingredient.ingredient, self.ingredient)
         self.assertEqual(order_ingredient.quantity, Decimal("3.0"))
@@ -337,7 +344,7 @@ class APITests(APITestCase):
     def test_order_status_update(self):
         """Test order status update"""
         self.client.force_authenticate(user=self.user)
-        
+
         # Create cuisine and order
         cuisine = Cuisine.objects.create(
             name="Status Test Dish",
@@ -345,26 +352,26 @@ class APITests(APITestCase):
             created_by=self.user,
             family=self.family,
         )
-        
+
         order = Order.objects.create(
             family=self.family,
             cuisine=cuisine,
             created_by=self.user,
             status="NEW",
         )
-        
+
         # Update status to COOKING
         data = {"status": "COOKING"}
         response = self.client.patch(f"/api/orders/{order.id}/update_status/", data)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        
+
         order_data = response.json()
         self.assertEqual(order_data["status"], "COOKING")
-        
+
         # Verify in database
         order.refresh_from_db()
         self.assertEqual(order.status, "COOKING")
-        
+
         # Test invalid status
         data = {"status": "INVALID"}
         response = self.client.patch(f"/api/orders/{order.id}/update_status/", data)
@@ -373,7 +380,7 @@ class APITests(APITestCase):
     def test_ingredient_deduction_on_order_completion(self):
         """Test that ingredients are deducted from pantry when order is marked as DONE"""
         self.client.force_authenticate(user=self.user)
-        
+
         # Create cuisine with ingredients
         cuisine = Cuisine.objects.create(
             name="Deduction Test Dish",
@@ -381,7 +388,7 @@ class APITests(APITestCase):
             created_by=self.user,
             family=self.family,
         )
-        
+
         # Add ingredient to cuisine
         RecipeIngredient.objects.create(
             cuisine=cuisine,
@@ -389,7 +396,7 @@ class APITests(APITestCase):
             quantity=Decimal("3.0"),
             unit="pieces",
         )
-        
+
         # Add stock to pantry
         pantry_stock = PantryStock.objects.create(
             family=self.family,
@@ -397,7 +404,7 @@ class APITests(APITestCase):
             qty_available=Decimal("10.0"),
             unit="pieces",
         )
-        
+
         # Create order
         order = Order.objects.create(
             family=self.family,
@@ -405,7 +412,7 @@ class APITests(APITestCase):
             created_by=self.user,
             status="NEW",
         )
-        
+
         # Create order ingredient (this would normally be done automatically)
         OrderItemIngredient.objects.create(
             order=order,
@@ -413,12 +420,194 @@ class APITests(APITestCase):
             quantity=Decimal("3.0"),
             unit="pieces",
         )
-        
+
         # Mark order as DONE
         data = {"status": "DONE"}
         response = self.client.patch(f"/api/orders/{order.id}/update_status/", data)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        
+
         # Check that ingredients were deducted
         pantry_stock.refresh_from_db()
         self.assertEqual(pantry_stock.qty_available, Decimal("7.0"))  # 10 - 3 = 7
+
+
+class AlertTests(TestCase):
+    """Test alert models and functionality"""
+
+    def setUp(self):
+        self.user = User.objects.create_user(username="testuser", email="test@example.com", password="testpass123")
+        self.family = Family.objects.create(name="Test Family")
+        self.ingredient = Ingredient.objects.create(name="Tomato", description="Fresh red tomato")
+        FamilyMember.objects.create(user=self.user, family=self.family, role="chef")
+
+    def test_alert_creation(self):
+        """Test alert model creation"""
+        alert = Alert.objects.create(
+            family=self.family,
+            ingredient=self.ingredient,
+            alert_type="LOW_STOCK",
+            message="Low stock: Tomato has 2.0 kg remaining",
+        )
+
+        self.assertEqual(alert.family, self.family)
+        self.assertEqual(alert.ingredient, self.ingredient)
+        self.assertEqual(alert.alert_type, "LOW_STOCK")
+        self.assertFalse(alert.is_resolved)
+        self.assertIsNone(alert.resolved_at)
+
+    def test_low_stock_threshold_creation(self):
+        """Test low stock threshold model creation"""
+        threshold = LowStockThreshold.objects.create(
+            family=self.family, ingredient=self.ingredient, threshold_qty=Decimal("5.0"), unit="kg"
+        )
+
+        self.assertEqual(threshold.family, self.family)
+        self.assertEqual(threshold.ingredient, self.ingredient)
+        self.assertEqual(threshold.threshold_qty, Decimal("5.0"))
+        self.assertEqual(threshold.unit, "kg")
+
+
+class AlertAPITests(APITestCase):
+    """Test alert API endpoints"""
+
+    def setUp(self):
+        self.user = User.objects.create_user(username="testuser", email="test@example.com", password="testpass123")
+        self.family = Family.objects.create(name="Test Family")
+        self.ingredient = Ingredient.objects.create(name="Tomato", description="Fresh red tomato")
+        FamilyMember.objects.create(user=self.user, family=self.family, role="chef")
+
+    def test_alert_list(self):
+        """Test listing alerts"""
+        # Create some alerts
+        Alert.objects.create(
+            family=self.family,
+            ingredient=self.ingredient,
+            alert_type="LOW_STOCK",
+            message="Low stock: Tomato has 2.0 kg remaining",
+        )
+        Alert.objects.create(
+            family=self.family,
+            ingredient=self.ingredient,
+            alert_type="EXPIRED",
+            message="Expired: Tomato expired on 2024-01-01",
+        )
+
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get("/api/alerts/")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
+        self.assertEqual(data["count"], 2)
+
+    def test_alert_resolve(self):
+        """Test resolving an alert"""
+        alert = Alert.objects.create(
+            family=self.family,
+            ingredient=self.ingredient,
+            alert_type="LOW_STOCK",
+            message="Low stock: Tomato has 2.0 kg remaining",
+        )
+
+        self.client.force_authenticate(user=self.user)
+        response = self.client.patch(f"/api/alerts/{alert.id}/resolve/")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # Check that alert is marked as resolved
+        alert.refresh_from_db()
+        self.assertTrue(alert.is_resolved)
+        self.assertIsNotNone(alert.resolved_at)
+
+    def test_low_stock_threshold_crud(self):
+        """Test low stock threshold CRUD operations"""
+        self.client.force_authenticate(user=self.user)
+
+        # Create threshold
+        data = {"family_id": self.family.id, "ingredient_id": self.ingredient.id, "threshold_qty": "5.0", "unit": "kg"}
+        response = self.client.post("/api/low-stock-thresholds/", data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        threshold_id = response.json()["id"]
+
+        # Read threshold
+        response = self.client.get(f"/api/low-stock-thresholds/{threshold_id}/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(float(response.json()["threshold_qty"]), 5.0)
+
+        # Update threshold
+        data = {"threshold_qty": "10.0"}
+        response = self.client.patch(f"/api/low-stock-thresholds/{threshold_id}/", data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(float(response.json()["threshold_qty"]), 10.0)
+
+
+class AlertTaskTests(TestCase):
+    """Test alert-related Celery tasks"""
+
+    def setUp(self):
+        self.user = User.objects.create_user(username="testuser", email="test@example.com", password="testpass123")
+        self.family = Family.objects.create(name="Test Family")
+        self.ingredient = Ingredient.objects.create(name="Tomato", description="Fresh red tomato")
+        FamilyMember.objects.create(user=self.user, family=self.family, role="chef")
+
+    def test_low_stock_alert_creation(self):
+        """Test that low stock alerts are created when stock falls below threshold"""
+        from .tasks import check_low_stock_alerts
+
+        # Create threshold
+        LowStockThreshold.objects.create(
+            family=self.family, ingredient=self.ingredient, threshold_qty=Decimal("5.0"), unit="kg"
+        )
+
+        # Create pantry stock below threshold
+        PantryStock.objects.create(family=self.family, ingredient=self.ingredient, qty_available=Decimal("3.0"), unit="kg")
+
+        # Run the task
+        result = check_low_stock_alerts()
+
+        # Check that alert was created
+        alerts = Alert.objects.filter(family=self.family, ingredient=self.ingredient, alert_type="LOW_STOCK")
+        self.assertEqual(alerts.count(), 1)
+        self.assertTrue("Created 1 low stock alerts" in result)
+
+    def test_expired_item_alert_creation(self):
+        """Test that expired item alerts are created"""
+        from .tasks import check_expired_items
+
+        # Create pantry stock that is expired
+        PantryStock.objects.create(
+            family=self.family,
+            ingredient=self.ingredient,
+            qty_available=Decimal("5.0"),
+            unit="kg",
+            best_before=date.today() - timedelta(days=1),  # Expired yesterday
+        )
+
+        # Run the task
+        result = check_expired_items()
+
+        # Check that alert was created
+        alerts = Alert.objects.filter(family=self.family, ingredient=self.ingredient, alert_type="EXPIRED")
+        self.assertEqual(alerts.count(), 1)
+        self.assertTrue("Created 1 expiry alerts" in result)
+
+    def test_no_duplicate_alerts(self):
+        """Test that duplicate alerts are not created"""
+        from .tasks import check_low_stock_alerts
+
+        # Create threshold
+        LowStockThreshold.objects.create(
+            family=self.family, ingredient=self.ingredient, threshold_qty=Decimal("5.0"), unit="kg"
+        )
+
+        # Create pantry stock below threshold
+        PantryStock.objects.create(family=self.family, ingredient=self.ingredient, qty_available=Decimal("3.0"), unit="kg")
+
+        # Run the task twice
+        check_low_stock_alerts()
+        result = check_low_stock_alerts()
+
+        # Check that only one alert exists
+        alerts = Alert.objects.filter(family=self.family, ingredient=self.ingredient, alert_type="LOW_STOCK")
+        self.assertEqual(alerts.count(), 1)
+        self.assertTrue("Created 0 low stock alerts" in result)  # Second run should create 0

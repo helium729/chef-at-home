@@ -13,6 +13,8 @@ router.register(r"recipe-ingredients", views.RecipeIngredientViewSet)
 router.register(r"pantry-stock", views.PantryStockViewSet)
 router.register(r"menu", views.MenuViewSet, basename="menu")
 router.register(r"orders", views.OrderViewSet)
+router.register(r"alerts", views.AlertViewSet)
+router.register(r"low-stock-thresholds", views.LowStockThresholdViewSet)
 
 urlpatterns = [
     path("", include(router.urls)),

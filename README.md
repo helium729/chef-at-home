@@ -103,9 +103,22 @@ familychef/
 - `GET|POST|PUT|PATCH|DELETE /api/pantry-stock/` - Pantry stock management
 - `GET /api/users/` - User information (read-only, family-scoped)
 
+### Phase 2 - Ordering Flow
+- `GET /api/menu/` - Menu display with availability information
+- `GET|POST|PUT|PATCH|DELETE /api/orders/` - Order management
+- `PATCH /api/orders/{id}/update_status/` - Order status updates
+- WebSocket: `/ws/orders/{family_id}/` - Real-time order updates
+
+### Phase 3 - Chef & Pantry
+- `GET|POST|PUT|PATCH|DELETE /api/alerts/` - Low-stock and expiry alerts
+- `PATCH /api/alerts/{id}/resolve/` - Mark alerts as resolved
+- `GET|POST|PUT|PATCH|DELETE /api/low-stock-thresholds/` - Configurable alert thresholds
+- Automated ingredient deduction when orders are completed
+- Celery tasks for daily low-stock and expiry checking
+
 ## Development
 
-This project follows the roadmap outlined in `Roadmap.md`. Current status: **Phase 2 Ordering Flow** ✅
+This project follows the roadmap outlined in `Roadmap.md`. Current status: **Phase 3 Chef & Pantry** ✅
 
 ### Code Quality and CI/CD
 
