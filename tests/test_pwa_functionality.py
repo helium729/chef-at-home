@@ -2,14 +2,34 @@
 E2E tests for PWA (Progressive Web App) functionality
 """
 
-import pytest
-from playwright.sync_api import Page, expect
+try:
+    import pytest  # noqa: F401
+    from playwright.sync_api import Page, expect
 
-from .conftest import E2ETestBase
+    from .conftest import E2ETestBase
+
+    PLAYWRIGHT_AVAILABLE = True
+except ImportError:
+    # Skip these tests if playwright/pytest not available (e.g., during Django test discovery)
+    PLAYWRIGHT_AVAILABLE = False
+
+    # Create dummy classes to prevent import errors during Django test discovery
+    class Page:
+        pass
+
+    def expect(*args, **kwargs):
+        pass
+
+    class E2ETestBase:
+        pass
 
 
 class TestPWAFunctionality(E2ETestBase):
     """Test PWA-specific features and functionality"""
+
+    def setUp(self):
+        if not PLAYWRIGHT_AVAILABLE:
+            self.skipTest("Playwright not available - E2E tests require separate pytest runner")
 
     def test_manifest_accessibility(self, page: Page):
         """Test that PWA manifest is accessible and valid"""
@@ -158,7 +178,7 @@ class TestPWAFunctionality(E2ETestBase):
         install_handler_exists = page.evaluate(
             """
             () => {
-                return window.addEventListener && 
+                return window.addEventListener &&
                        (typeof window.FamilyChefPWA !== 'undefined' ||
                         document.querySelector('script[src*="pwa.js"]') !== null);
             }

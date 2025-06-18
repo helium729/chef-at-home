@@ -2,14 +2,34 @@
 E2E tests for core user workflows in FamilyChef application
 """
 
-import pytest
-from playwright.sync_api import Page, expect
+try:
+    import pytest  # noqa: F401
+    from playwright.sync_api import Page, expect
 
-from .conftest import E2ETestBase
+    from .conftest import E2ETestBase
+
+    PLAYWRIGHT_AVAILABLE = True
+except ImportError:
+    # Skip these tests if playwright/pytest not available (e.g., during Django test discovery)
+    PLAYWRIGHT_AVAILABLE = False
+
+    # Create dummy classes to prevent import errors during Django test discovery
+    class Page:
+        pass
+
+    def expect(*args, **kwargs):
+        pass
+
+    class E2ETestBase:
+        pass
 
 
 class TestUserWorkflows(E2ETestBase):
     """Test core user workflows end-to-end"""
+
+    def setUp(self):
+        if not PLAYWRIGHT_AVAILABLE:
+            self.skipTest("Playwright not available - E2E tests require separate pytest runner")
 
     def test_menu_browsing_workflow(self, page: Page):
         """Test user can browse available menu items"""
