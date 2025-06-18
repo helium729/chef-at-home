@@ -30,7 +30,8 @@ def send_shopping_list_update(family_id, shopping_item_data):
     if channel_layer:
         try:
             async_to_sync(channel_layer.group_send)(
-                f"shopping_{family_id}", {"type": "shopping_list_update", "message": {"action": "shopping_list_updated", "item": shopping_item_data}}
+                f"shopping_{family_id}",
+                {"type": "shopping_list_update", "message": {"action": "shopping_list_updated", "item": shopping_item_data}},
             )
         except Exception:
             # Silently fail if Redis is not available (e.g., during testing)

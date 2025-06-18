@@ -76,8 +76,7 @@ def check_expired_items():
             # For items expiring soon, we'll still use EXPIRED type but with different message
             days_until_expiry = (item.best_before - today).days
             alert_type = "EXPIRED"
-            message = (f"Expiring soon: {item.ingredient.name} expires in "
-                       f"{days_until_expiry} day(s) on {item.best_before}")
+            message = f"Expiring soon: {item.ingredient.name} expires in " f"{days_until_expiry} day(s) on {item.best_before}"
 
         # Check if there's already an active alert for this item
         existing_alert = Alert.objects.filter(
@@ -151,9 +150,7 @@ def generate_shopping_lists():
 
             # Ensure positive quantity
             if qty_needed > 0:
-                ShoppingList.objects.create(
-                    family=family, ingredient=alert.ingredient, qty_needed=qty_needed, unit=unit
-                )
+                ShoppingList.objects.create(family=family, ingredient=alert.ingredient, qty_needed=qty_needed, unit=unit)
                 items_created += 1
 
     return f"Generated {items_created} shopping list items"

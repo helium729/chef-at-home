@@ -139,14 +139,14 @@ class ModelTests(TestCase):
             qty_needed=Decimal("3.0"),
             unit="pieces",
         )
-        
+
         # Initially not resolved
         self.assertFalse(shopping_item.is_resolved)
-        
+
         # Resolve the item
         shopping_item.resolved_at = timezone.now()
         shopping_item.save()
-        
+
         # Should now be resolved
         self.assertTrue(shopping_item.is_resolved)
         self.assertIsNotNone(shopping_item.resolved_at)
@@ -523,7 +523,7 @@ class APITests(APITestCase):
         # User should only see their family's shopping list item
         response = self.client.get("/api/shopping-list/")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        
+
         items = response.json()["results"]
         self.assertEqual(len(items), 1)
         self.assertEqual(items[0]["id"], shopping_item.id)
@@ -829,7 +829,8 @@ class PWATests(TestCase):
         super().setUpClass()
         # Collect static files for testing
         from django.core.management import call_command
-        call_command('collectstatic', '--noinput', verbosity=0)
+
+        call_command("collectstatic", "--noinput", verbosity=0)
 
     def setUp(self):
         self.client = Client()
@@ -837,12 +838,12 @@ class PWATests(TestCase):
     def test_pwa_manifest_endpoint(self):
         """Test PWA manifest.json endpoint"""
         response = self.client.get("/manifest.json")
-        
+
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response["Content-Type"], "application/manifest+json")
-        
+
         data = json.loads(response.content)
-        
+
         # Check required manifest fields
         self.assertEqual(data["name"], "FamilyChef - H5 Cooking Assistant")
         self.assertEqual(data["short_name"], "FamilyChef")
@@ -850,12 +851,12 @@ class PWATests(TestCase):
         self.assertEqual(data["theme_color"], "#4CAF50")
         self.assertEqual(data["background_color"], "#ffffff")
         self.assertEqual(data["start_url"], "/")
-        
+
         # Check icons array exists
         self.assertIn("icons", data)
         self.assertIsInstance(data["icons"], list)
         self.assertTrue(len(data["icons"]) > 0)
-        
+
         # Check first icon has required fields
         first_icon = data["icons"][0]
         self.assertIn("src", first_icon)
@@ -865,19 +866,19 @@ class PWATests(TestCase):
     def test_home_page_pwa_meta_tags(self):
         """Test that home page includes PWA meta tags"""
         response = self.client.get("/")
-        
+
         self.assertEqual(response.status_code, 200)
         content = response.content.decode()
-        
+
         # Check PWA meta tags
         self.assertIn('<meta name="theme-color" content="#4CAF50">', content)
         self.assertIn('<meta name="apple-mobile-web-app-capable" content="yes">', content)
         self.assertIn('<meta name="apple-mobile-web-app-title" content="FamilyChef">', content)
         self.assertIn('<meta name="mobile-web-app-capable" content="yes">', content)
-        
+
         # Check manifest link
         self.assertIn('<link rel="manifest" href="/manifest.json">', content)
-        
+
         # Check viewport meta tag for mobile responsiveness
         self.assertIn('<meta name="viewport" content="width=device-width, initial-scale=1.0">', content)
 
@@ -886,21 +887,21 @@ class PWATests(TestCase):
         # Test CSS file
         response = self.client.get("/static/core/css/main.css")
         self.assertEqual(response.status_code, 200)
-        
+
         # Test JavaScript files
         response = self.client.get("/static/core/js/main.js")
         self.assertEqual(response.status_code, 200)
-        
+
         response = self.client.get("/static/core/js/pwa.js")
         self.assertEqual(response.status_code, 200)
-        
+
         response = self.client.get("/static/core/js/sw.js")
         self.assertEqual(response.status_code, 200)
 
     def test_service_worker_caching_headers(self):
         """Test service worker has appropriate caching headers"""
         response = self.client.get("/static/core/js/sw.js")
-        
+
         # Service worker should not be cached aggressively
         self.assertEqual(response.status_code, 200)
         # Note: In production, you'd want Cache-Control headers for service workers
@@ -908,18 +909,18 @@ class PWATests(TestCase):
     def test_responsive_design_css_classes(self):
         """Test that responsive design CSS classes are included"""
         response = self.client.get("/static/core/css/main.css")
-        
+
         # Handle WhiteNoise static file response
         try:
             content = response.content.decode()
         except AttributeError:
             # WhiteNoise streaming response
-            content = b''.join(response.streaming_content).decode()
-        
+            content = b"".join(response.streaming_content).decode()
+
         # Check for mobile-first responsive breakpoints
         self.assertIn("@media (min-width: 481px)", content)  # Tablet
         self.assertIn("@media (min-width: 769px)", content)  # Desktop
-        
+
         # Check for responsive utility classes
         self.assertIn(".col-12", content)
         self.assertIn(".mobile", content)
@@ -931,17 +932,17 @@ class PWATests(TestCase):
         pages = [
             ("/", "menu"),
             ("/chef/", "chef_board"),
-            ("/pantry/", "pantry"), 
+            ("/pantry/", "pantry"),
             ("/shopping/", "shopping_list"),
         ]
-        
+
         for url, page_name in pages:
             with self.subTest(page=page_name):
                 response = self.client.get(url)
                 self.assertEqual(response.status_code, 200)
-                
+
                 content = response.content.decode()
-                
+
                 # Check base template elements
                 self.assertIn("FamilyChef", content)
                 self.assertIn("PWA", content)
@@ -952,13 +953,13 @@ class PWATests(TestCase):
     def test_offline_functionality_javascript(self):
         """Test that offline functionality JavaScript is included"""
         response = self.client.get("/static/core/js/pwa.js")
-        
+
         # Handle WhiteNoise static file response
         try:
             content = response.content.decode()
         except AttributeError:
-            content = b''.join(response.streaming_content).decode()
-        
+            content = b"".join(response.streaming_content).decode()
+
         # Check for key PWA functionality
         self.assertIn("serviceWorker", content)
         self.assertIn("FamilyChefPWA", content)
@@ -969,23 +970,23 @@ class PWATests(TestCase):
     def test_service_worker_implementation(self):
         """Test service worker includes required functionality"""
         response = self.client.get("/static/core/js/sw.js")
-        
+
         # Handle WhiteNoise static file response
         try:
             content = response.content.decode()
         except AttributeError:
-            content = b''.join(response.streaming_content).decode()
-        
+            content = b"".join(response.streaming_content).decode()
+
         # Check for service worker events
         self.assertIn("install", content)
         self.assertIn("activate", content)
         self.assertIn("fetch", content)
-        
+
         # Check for caching strategies
         self.assertIn("CACHE_NAME", content)
         self.assertIn("caches.open", content)
         self.assertIn("cache.addAll", content)
-        
+
         # Check for offline menu support
         self.assertIn("/api/menu/", content)
         self.assertIn("networkFirstStrategy", content)
@@ -994,62 +995,62 @@ class PWATests(TestCase):
     def test_dark_mode_support(self):
         """Test that dark mode CSS variables are included"""
         response = self.client.get("/static/core/css/main.css")
-        
+
         # Handle WhiteNoise static file response
         try:
             content = response.content.decode()
         except AttributeError:
-            content = b''.join(response.streaming_content).decode()
-        
+            content = b"".join(response.streaming_content).decode()
+
         # Check for dark theme CSS variables
         self.assertIn('[data-theme="dark"]', content)
         self.assertIn("--bg-primary: #121212", content)
         self.assertIn("--text-primary: #ffffff", content)
-        
+
         # Check for theme toggle functionality in JavaScript
         response = self.client.get("/static/core/js/main.js")
         try:
             js_content = response.content.decode()
         except AttributeError:
-            js_content = b''.join(response.streaming_content).decode()
+            js_content = b"".join(response.streaming_content).decode()
         self.assertIn("toggleTheme", js_content)
 
     def test_touch_friendly_design(self):
         """Test that design includes touch-friendly elements"""
         response = self.client.get("/static/core/css/main.css")
-        
+
         # Handle WhiteNoise static file response
         try:
             content = response.content.decode()
         except AttributeError:
-            content = b''.join(response.streaming_content).decode()
-        
+            content = b"".join(response.streaming_content).decode()
+
         # Check for touch-friendly minimum sizes
         self.assertIn("min-height: 44px", content)  # Touch targets
         self.assertIn("min-height: 48px", content)  # Larger touch targets
-        
+
         # Check for touch-specific media queries
         self.assertIn("@media (hover: none) and (pointer: coarse)", content)
-        
+
         # Check for touch optimization
         self.assertIn("touch-action: manipulation", content)
 
     def test_accessibility_features(self):
         """Test that accessibility features are included"""
         response = self.client.get("/static/core/css/main.css")
-        
+
         # Handle WhiteNoise static file response
         try:
             content = response.content.decode()
         except AttributeError:
-            content = b''.join(response.streaming_content).decode()
-        
+            content = b"".join(response.streaming_content).decode()
+
         # Check for high contrast mode support
         self.assertIn("@media (prefers-contrast: high)", content)
-        
+
         # Check for reduced motion support
         self.assertIn("@media (prefers-reduced-motion: reduce)", content)
-        
+
         # Check for focus styles
         self.assertIn("focus", content)
         self.assertIn("outline", content)
@@ -1059,18 +1060,18 @@ class WebSocketTests(TestCase):
     """Test WebSocket consumer functionality"""
 
     def setUp(self):
-        self.user = User.objects.create_user(username='testuser', password='testpass123')
-        self.family = Family.objects.create(name='Test Family')
-        FamilyMember.objects.create(user=self.user, family=self.family, role='chef')
+        self.user = User.objects.create_user(username="testuser", password="testpass123")
+        self.family = Family.objects.create(name="Test Family")
+        FamilyMember.objects.create(user=self.user, family=self.family, role="chef")
 
     @override_settings(TESTING=False)
     def test_send_order_update_util(self):
         """Test order update utility function"""
         from core.utils import send_order_update
-        
+
         # Test with valid data
-        order_data = {'id': 1, 'status': 'DONE'}
-        
+        order_data = {"id": 1, "status": "DONE"}
+
         # Should not raise an exception
         try:
             send_order_update(self.family.id, order_data)
@@ -1081,10 +1082,10 @@ class WebSocketTests(TestCase):
     def test_send_shopping_list_update_util(self):
         """Test shopping list update utility function"""
         from core.utils import send_shopping_list_update
-        
+
         # Test with valid data
-        shopping_data = {'id': 1, 'is_resolved': True}
-        
+        shopping_data = {"id": 1, "is_resolved": True}
+
         # Should not raise an exception
         try:
             send_shopping_list_update(self.family.id, shopping_data)
@@ -1094,18 +1095,18 @@ class WebSocketTests(TestCase):
     def test_send_order_update_during_testing(self):
         """Test that order updates are skipped during testing"""
         from core.utils import send_order_update
-        
+
         # Should complete without error during testing
-        order_data = {'id': 1, 'status': 'DONE'}
+        order_data = {"id": 1, "status": "DONE"}
         send_order_update(self.family.id, order_data)
         # No exception should be raised
 
     def test_send_shopping_list_update_during_testing(self):
         """Test that shopping list updates are skipped during testing"""
         from core.utils import send_shopping_list_update
-        
+
         # Should complete without error during testing
-        shopping_data = {'id': 1, 'is_resolved': True}
+        shopping_data = {"id": 1, "is_resolved": True}
         send_shopping_list_update(self.family.id, shopping_data)
         # No exception should be raised
 
@@ -1114,23 +1115,20 @@ class WebSocketConsumerTests(TestCase):
     """Test WebSocket consumer behavior (mock-based tests)"""
 
     def setUp(self):
-        self.user = User.objects.create_user(username='testuser', password='testpass123')
-        self.family = Family.objects.create(name='Test Family')
-        FamilyMember.objects.create(user=self.user, family=self.family, role='chef')
+        self.user = User.objects.create_user(username="testuser", password="testpass123")
+        self.family = Family.objects.create(name="Test Family")
+        FamilyMember.objects.create(user=self.user, family=self.family, role="chef")
 
     def test_order_consumer_authentication_required(self):
         """Test that OrderConsumer requires authentication"""
         from core.consumers import OrderConsumer
-        
+
         # Mock unauthenticated scope
-        scope = {
-            'url_route': {'kwargs': {'family_id': str(self.family.id)}},
-            'user': None  # Unauthenticated user
-        }
-        
+        scope = {"url_route": {"kwargs": {"family_id": str(self.family.id)}}, "user": None}  # Unauthenticated user
+
         consumer = OrderConsumer()
         consumer.scope = scope
-        
+
         # The consumer should handle unauthenticated users appropriately
         # (This would normally be tested with async test frameworks)
         self.assertIsNotNone(consumer)
@@ -1138,49 +1136,40 @@ class WebSocketConsumerTests(TestCase):
     def test_shopping_list_consumer_authentication_required(self):
         """Test that ShoppingListConsumer requires authentication"""
         from core.consumers import ShoppingListConsumer
-        
+
         # Mock unauthenticated scope
-        scope = {
-            'url_route': {'kwargs': {'family_id': str(self.family.id)}},
-            'user': None  # Unauthenticated user
-        }
-        
+        scope = {"url_route": {"kwargs": {"family_id": str(self.family.id)}}, "user": None}  # Unauthenticated user
+
         consumer = ShoppingListConsumer()
         consumer.scope = scope
-        
+
         # The consumer should handle unauthenticated users appropriately
         self.assertIsNotNone(consumer)
 
     def test_order_consumer_room_group_name(self):
         """Test that OrderConsumer sets correct room group name"""
         from core.consumers import OrderConsumer
-        
-        scope = {
-            'url_route': {'kwargs': {'family_id': str(self.family.id)}},
-            'user': self.user
-        }
-        
+
+        scope = {"url_route": {"kwargs": {"family_id": str(self.family.id)}}, "user": self.user}
+
         consumer = OrderConsumer()
         consumer.scope = scope
         consumer.family_id = str(self.family.id)
         consumer.room_group_name = f"orders_{self.family.id}"
-        
+
         self.assertEqual(consumer.room_group_name, f"orders_{self.family.id}")
 
     def test_shopping_list_consumer_room_group_name(self):
         """Test that ShoppingListConsumer sets correct room group name"""
         from core.consumers import ShoppingListConsumer
-        
-        scope = {
-            'url_route': {'kwargs': {'family_id': str(self.family.id)}},
-            'user': self.user
-        }
-        
+
+        scope = {"url_route": {"kwargs": {"family_id": str(self.family.id)}}, "user": self.user}
+
         consumer = ShoppingListConsumer()
         consumer.scope = scope
         consumer.family_id = str(self.family.id)
         consumer.room_group_name = f"shopping_{self.family.id}"
-        
+
         self.assertEqual(consumer.room_group_name, f"shopping_{self.family.id}")
 
 
@@ -1188,95 +1177,72 @@ class CeleryTaskTests(TestCase):
     """Test Celery task functionality"""
 
     def setUp(self):
-        self.user = User.objects.create_user(username='testuser', password='testpass123')
-        self.family = Family.objects.create(name='Test Family')
-        FamilyMember.objects.create(user=self.user, family=self.family, role='chef')
-        
-        self.ingredient = Ingredient.objects.create(name='Test Ingredient')
-        
+        self.user = User.objects.create_user(username="testuser", password="testpass123")
+        self.family = Family.objects.create(name="Test Family")
+        FamilyMember.objects.create(user=self.user, family=self.family, role="chef")
+
+        self.ingredient = Ingredient.objects.create(name="Test Ingredient")
+
         # Create pantry stock below threshold
-        self.stock = PantryStock.objects.create(
-            family=self.family,
-            ingredient=self.ingredient,
-            qty_available=5.0,
-            unit='kg'
-        )
-        
+        self.stock = PantryStock.objects.create(family=self.family, ingredient=self.ingredient, qty_available=5.0, unit="kg")
+
         # Create low stock threshold
         self.threshold = LowStockThreshold.objects.create(
-            family=self.family,
-            ingredient=self.ingredient,
-            threshold_qty=10.0,
-            unit='kg'
+            family=self.family, ingredient=self.ingredient, threshold_qty=10.0, unit="kg"
         )
 
     def test_check_low_stock_task_direct_call(self):
         """Test low stock checking task"""
         from core.tasks import check_low_stock_alerts
-        
+
         # Call the task directly (not through Celery)
         check_low_stock_alerts()
-        
+
         # Check that an alert was created
-        alert = Alert.objects.filter(
-            family=self.family,
-            alert_type='LOW_STOCK',
-            ingredient=self.ingredient
-        ).first()
-        
+        alert = Alert.objects.filter(family=self.family, alert_type="LOW_STOCK", ingredient=self.ingredient).first()
+
         self.assertIsNotNone(alert)
         self.assertFalse(alert.is_resolved)
 
     def test_check_expired_items_task_direct_call(self):
         """Test expired items checking task"""
-        from core.tasks import check_expired_items
         from datetime import date, timedelta
-        
+
+        from core.tasks import check_expired_items
+
         # Create a different ingredient to avoid unique constraint
-        expired_ingredient = Ingredient.objects.create(name='Expired Ingredient')
-        
+        expired_ingredient = Ingredient.objects.create(name="Expired Ingredient")
+
         # Create expired stock
         expired_stock = PantryStock.objects.create(
             family=self.family,
             ingredient=expired_ingredient,
             qty_available=3.0,
-            unit='kg',
-            best_before=date.today() - timedelta(days=1)  # Expired yesterday
+            unit="kg",
+            best_before=date.today() - timedelta(days=1),  # Expired yesterday
         )
-        
+
         # Call the task directly
         check_expired_items()
-        
+
         # Check that an alert was created
-        alert = Alert.objects.filter(
-            family=self.family,
-            alert_type='EXPIRED',
-            ingredient=expired_ingredient
-        ).first()
-        
+        alert = Alert.objects.filter(family=self.family, alert_type="EXPIRED", ingredient=expired_ingredient).first()
+
         self.assertIsNotNone(alert)
         self.assertFalse(alert.is_resolved)
 
     def test_generate_shopping_list_task_direct_call(self):
         """Test shopping list generation task"""
         from core.tasks import generate_shopping_lists
-        
+
         # Create an unresolved low stock alert
-        Alert.objects.create(
-            family=self.family,
-            alert_type='LOW_STOCK',
-            ingredient=self.ingredient,
-            is_resolved=False
-        )
-        
+        Alert.objects.create(family=self.family, alert_type="LOW_STOCK", ingredient=self.ingredient, is_resolved=False)
+
         # Call the task directly
         generate_shopping_lists()
-        
+
         # Check that a shopping list item was created
-        shopping_item = ShoppingList.objects.filter(
-            family=self.family,
-            ingredient=self.ingredient
-        ).first()
-        
+        shopping_item = ShoppingList.objects.filter(family=self.family, ingredient=self.ingredient).first()
+
         self.assertIsNotNone(shopping_item)
         self.assertFalse(shopping_item.is_resolved)

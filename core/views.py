@@ -298,6 +298,7 @@ class ShoppingListViewSet(viewsets.ModelViewSet):
 
         # Send WebSocket notification
         from .utils import send_shopping_list_update
+
         send_shopping_list_update(shopping_item.family.id, serializer.data)
 
         return Response(serializer.data)
@@ -306,38 +307,39 @@ class ShoppingListViewSet(viewsets.ModelViewSet):
 # PWA Template Views
 def home(request):
     """Main menu page"""
-    return render(request, 'menu.html')
+    return render(request, "menu.html")
 
 
 def chef_board(request):
     """Chef board page"""
     # For now, return a simple template - could be enhanced later
-    return render(request, 'menu.html', {'page': 'chef_board'})
+    return render(request, "menu.html", {"page": "chef_board"})
 
 
 def pantry(request):
     """Pantry management page"""
-    # For now, return a simple template - could be enhanced later  
-    return render(request, 'menu.html', {'page': 'pantry'})
+    # For now, return a simple template - could be enhanced later
+    return render(request, "menu.html", {"page": "pantry"})
 
 
 def shopping_list_view(request):
     """Shopping list page"""
     # For now, return a simple template - could be enhanced later
-    return render(request, 'menu.html', {'page': 'shopping'})
+    return render(request, "menu.html", {"page": "shopping"})
 
 
 def pwa_manifest(request):
     """PWA manifest.json endpoint"""
     import json
     import os
+
     from django.conf import settings
-    
+
     # Read manifest.json from static files
-    manifest_path = os.path.join(settings.BASE_DIR, 'core', 'static', 'core', 'manifest', 'manifest.json')
-    
+    manifest_path = os.path.join(settings.BASE_DIR, "core", "static", "core", "manifest", "manifest.json")
+
     try:
-        with open(manifest_path, 'r') as f:
+        with open(manifest_path, "r") as f:
             manifest_data = json.load(f)
     except FileNotFoundError:
         # Fallback manifest if file not found
@@ -349,7 +351,7 @@ def pwa_manifest(request):
             "display": "standalone",
             "theme_color": "#4CAF50",
             "background_color": "#ffffff",
-            "icons": []
+            "icons": [],
         }
-    
-    return JsonResponse(manifest_data, content_type='application/manifest+json')
+
+    return JsonResponse(manifest_data, content_type="application/manifest+json")
