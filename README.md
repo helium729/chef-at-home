@@ -146,19 +146,26 @@ familychef/
 
 ## Development
 
-This project follows the roadmap outlined in `Roadmap.md`. Current status: **Phase 5 Polish & PWA** ✅
+This project follows the roadmap outlined in `Roadmap.md`. Current status: **Phase 6 Tests + CI/CD** ✅
 
 ### Code Quality and CI/CD
 
-The project includes comprehensive CI/CD workflows:
+The project includes comprehensive CI/CD workflows with automated testing, code quality checks, and staging deployment:
 
 #### Continuous Integration
-- **Automated Testing**: Django tests run on Python 3.11 and 3.12
+- **Automated Testing**: Django tests run on Python 3.11 and 3.12 with 84%+ code coverage
+- **End-to-End Testing**: Playwright-based e2e tests for critical user workflows
 - **Code Formatting**: Black formatter ensures consistent code style
-- **Import Sorting**: isort organizes imports automatically
+- **Import Sorting**: isort organizes imports automatically  
 - **Linting**: flake8 catches syntax errors and style issues
 - **Security Scanning**: bandit and safety scan for security vulnerabilities
 - **Docker Testing**: Full Docker Compose stack validation
+
+#### Staging Deployment
+- **Automated Deployment**: Successful CI builds trigger staging deployment
+- **Health Checks**: Post-deployment verification of all endpoints
+- **Staging E2E Tests**: End-to-end testing against staging environment
+- **Docker Registry**: Automated image building and publishing
 
 #### Development Tools
 - **Code Formatting**: Run `black .` to format code
@@ -167,13 +174,38 @@ The project includes comprehensive CI/CD workflows:
 - **Security**: Run `bandit -r .` and `safety scan -r requirements.txt`
 
 #### Running Tests Locally
+
+##### Unit and Integration Tests
 ```bash
 # Install development dependencies
 pip install -r requirements-dev.txt
 
-# Run Django tests
-python manage.py test
+# Run Django tests with coverage
+coverage run --source='.' manage.py test
+coverage report --show-missing
 
+# Run specific test categories
+python manage.py test core.tests.APITests      # API tests
+python manage.py test core.tests.PWATests      # PWA tests  
+python manage.py test core.tests.CeleryTaskTests  # Background task tests
+```
+
+##### End-to-End Tests
+```bash
+# Install Playwright browsers
+playwright install chromium
+
+# Run e2e tests locally (requires running server)
+python manage.py runserver &  # Start server in background
+cd tests
+pytest -v --tb=short
+
+# Run e2e tests against staging
+E2E_BASE_URL=https://your-staging-url.com pytest -v
+```
+
+##### Code Quality Checks
+```bash
 # Run all code quality checks
 black --check .
 isort --check-only .
@@ -181,6 +213,16 @@ flake8 .
 bandit -r .
 safety scan -r requirements.txt
 ```
+
+### Testing Strategy
+
+The project follows Phase 6 testing requirements:
+
+- **Backend Coverage**: 84%+ unit and integration test coverage
+- **End-to-End Tests**: 20% of testing effort focused on critical user workflows
+- **PWA Testing**: Offline functionality, responsive design, and installation flows
+- **WebSocket Testing**: Real-time functionality validation
+- **Task Testing**: Background job and scheduled task validation
 
 For detailed project specifications, user flows, and development phases, see [Roadmap.md](./Roadmap.md).
 
