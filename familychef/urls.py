@@ -15,14 +15,14 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 
+from django.conf import settings
+from django.conf.urls.static import static
 from django.contrib import admin
+from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 from django.http import JsonResponse
 from django.urls import include, path
-from django.conf import settings
-from django.contrib.staticfiles.urls import staticfiles_urlpatterns
-from django.conf.urls.static import static
 
-from core.views import home, chef_board, pantry, shopping_list_view, pwa_manifest
+from core.views import chef_board, home, pantry, pwa_manifest, shopping_list_view
 
 
 def api_health_check(request):

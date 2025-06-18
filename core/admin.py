@@ -1,6 +1,17 @@
 from django.contrib import admin
 
-from .models import Alert, Cuisine, Family, FamilyMember, Ingredient, LowStockThreshold, Order, PantryStock, RecipeIngredient, ShoppingList
+from .models import (
+    Alert,
+    Cuisine,
+    Family,
+    FamilyMember,
+    Ingredient,
+    LowStockThreshold,
+    Order,
+    PantryStock,
+    RecipeIngredient,
+    ShoppingList,
+)
 
 
 @admin.register(Family)
@@ -86,10 +97,13 @@ class ShoppingListAdmin(admin.ModelAdmin):
 
     def is_resolved(self, obj):
         return obj.is_resolved
+
     is_resolved.boolean = True
     is_resolved.short_description = "Resolved"
 
     def mark_resolved(self, request, queryset):
         from django.utils import timezone
+
         queryset.update(resolved_at=timezone.now())
+
     mark_resolved.short_description = "Mark selected items as resolved"
