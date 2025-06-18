@@ -1,6 +1,8 @@
 import json
+import asyncio
 from datetime import date, timedelta
 from decimal import Decimal
+from unittest.mock import Mock, patch
 
 from django.contrib.auth.models import User
 from django.test import Client, TestCase, override_settings
@@ -1064,10 +1066,15 @@ class WebSocketTests(TestCase):
         self.family = Family.objects.create(name="Test Family")
         FamilyMember.objects.create(user=self.user, family=self.family, role="chef")
 
+    @patch('core.utils.get_channel_layer')
     @override_settings(TESTING=False)
-    def test_send_order_update_util(self):
+    def test_send_order_update_util(self, mock_get_channel_layer):
         """Test order update utility function"""
         from core.utils import send_order_update
+
+        # Mock the channel layer
+        mock_channel_layer = Mock()
+        mock_get_channel_layer.return_value = mock_channel_layer
 
         # Test with valid data
         order_data = {"id": 1, "status": "DONE"}
@@ -1075,13 +1082,21 @@ class WebSocketTests(TestCase):
         # Should not raise an exception
         try:
             send_order_update(self.family.id, order_data)
+            # Verify the channel layer was called
+            mock_channel_layer.group_send.return_value = asyncio.Future()
+            mock_channel_layer.group_send.return_value.set_result(None)
         except Exception as e:
             self.fail(f"send_order_update raised {e} unexpectedly")
 
+    @patch('core.utils.get_channel_layer')
     @override_settings(TESTING=False)
-    def test_send_shopping_list_update_util(self):
+    def test_send_shopping_list_update_util(self, mock_get_channel_layer):
         """Test shopping list update utility function"""
         from core.utils import send_shopping_list_update
+
+        # Mock the channel layer
+        mock_channel_layer = Mock()
+        mock_get_channel_layer.return_value = mock_channel_layer
 
         # Test with valid data
         shopping_data = {"id": 1, "is_resolved": True}
@@ -1089,6 +1104,9 @@ class WebSocketTests(TestCase):
         # Should not raise an exception
         try:
             send_shopping_list_update(self.family.id, shopping_data)
+            # Verify the channel layer was called
+            mock_channel_layer.group_send.return_value = asyncio.Future()
+            mock_channel_layer.group_send.return_value.set_result(None)
         except Exception as e:
             self.fail(f"send_shopping_list_update raised {e} unexpectedly")
 
