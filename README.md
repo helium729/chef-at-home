@@ -1,231 +1,153 @@
-# FamilyChef – H5 Cooking-Assistant
+# FamilyChef – Your Family's Smart Cooking Assistant
 
-A Django-powered mobile web ("H5") application that helps families plan, cook, and restock ingredients with minimal friction.
+Transform your family's cooking experience with FamilyChef - a smart web application that helps coordinate meals, manage your pantry, and streamline shopping. Think of it as your family's personal "back-of-house" system that eliminates the daily question "What's for dinner?"
 
-## Quick Start
+## What is FamilyChef?
 
-### Prerequisites
-- Python 3.11+
-- Docker and Docker Compose (optional)
-- PostgreSQL and Redis (for production)
+FamilyChef is like having a smart kitchen assistant that knows what ingredients you have, what your family likes to eat, and who's cooking tonight. It's designed for busy families who want to:
 
-### Local Development Setup
+- **Eliminate food waste** by tracking what you have and what you need
+- **Coordinate family meals** without constant communication
+- **Simplify shopping** with automatic, smart shopping lists
+- **Make cooking less stressful** with organized recipes and real-time updates
 
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd chef-at-home
-   ```
+## How Your Family Will Use FamilyChef
 
-2. **Create virtual environment**
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
+### 🍕 **Family Members**: "What can I eat right now?"
+- Browse the family menu on your phone
+- See what meals can be made with ingredients you have (highlighted in green)
+- Place an order for what you want to eat
+- Get real-time updates on cooking progress
+- Works offline - perfect for checking the menu anywhere
 
-3. **Install dependencies**
-   ```bash
-   pip install -r requirements.txt
-   ```
+### 👨‍🍳 **Home Chef**: "What should I cook and what do I need?"
+- See all family meal requests in one organized dashboard
+- Manage orders like a friendly restaurant: New → Cooking → Ready
+- Add and edit family recipes with ingredients and cooking times
+- Track ingredient usage automatically as you complete orders
+- Get alerts when ingredients are running low
 
-4. **Set up environment variables**
-   ```bash
-   cp .env.example .env
-   # Edit .env file with your settings
-   ```
+### 🛒 **Family Shopper**: "What do we actually need to buy?"
+- Get automatically generated shopping lists based on real family needs
+- See what's running low, expired, or needed for planned meals
+- Update pantry inventory quickly after shopping
+- Track spending and optimize your family's food budget
+- Share lists with other family members
 
-5. **Run migrations**
-   ```bash
-   python manage.py migrate
-   ```
+## Real Family Scenarios
 
-6. **Start the development server**
-   ```bash
-   python manage.py runserver
-   ```
+### **Scenario 1: Tuesday Evening Dinner**
+*Sarah (mom) is wondering what to make for dinner...*
 
-7. **Test the setup**
-   ```bash
-   curl http://localhost:8000/api/health/
-   ```
+1. **Family checks menu**: Kids see "Spaghetti Bolognese" highlighted green (all ingredients available)
+2. **Orders placed**: Both kids place orders for spaghetti
+3. **Chef notified**: Sarah gets notification of 2 spaghetti orders
+4. **Cooking coordinated**: Sarah starts cooking, kids get updates "Started cooking - 25 minutes"
+5. **Dinner ready**: Automatic notification when meal is complete
+6. **Ingredients updated**: Ground beef and pasta quantities automatically reduced
 
-### Docker Setup
+### **Scenario 2: Planning Weekend Meals**
+*Mike (dad) wants to plan special weekend cooking...*
 
-1. **Build and start services**
-   ```bash
-   docker-compose up --build
-   ```
+1. **Check availability**: Reviews what ingredients are available for ambitious recipes
+2. **Plan ahead**: Sees that special ingredients are needed for weekend recipes
+3. **Shopping coordination**: Ingredients automatically added to family shopping list
+4. **Family involvement**: Kids can see what special meals are planned and get excited
 
-2. **Run migrations (in another terminal)**
-   ```bash
-   docker-compose exec web python manage.py migrate
-   ```
+### **Scenario 3: Grocery Shopping Made Smart**
+*Lisa is at the grocery store...*
 
-3. **Create superuser**
-   ```bash
-   docker-compose exec web python manage.py createsuperuser
-   ```
+1. **Smart shopping list**: Her phone shows exactly what's needed based on family usage patterns
+2. **Real-time updates**: List updates as other family members cook or use ingredients
+3. **Budget awareness**: Tracks spending against family food budget
+4. **Easy inventory**: Quick updates to pantry when she gets home
 
-## Architecture
+## Getting Started
 
-- **Backend**: Django 5.x + Django REST Framework
-- **Database**: PostgreSQL (SQLite for development)
-- **Cache/Queue**: Redis + Celery
-- **WebSocket**: Django Channels
-- **Authentication**: Django Allauth + JWT
+### **Step 1: Install FamilyChef**
+- Open your web browser and go to your family's FamilyChef URL
+- On mobile: Tap "Add to Home Screen" to install like a native app
+- On desktop: Bookmark for easy access
 
-## Project Structure
+### **Step 2: Set Up Your Family**
+- Create an account or join your family's existing setup
+- Choose your role: Family Member, Chef, or Shopper
+- Each family member can have multiple roles
 
-```
-familychef/
-├── familychef/          # Django project settings
-├── core/               # Core functionality
-├── requirements.txt    # Python dependencies
-├── docker-compose.yml  # Docker configuration
-├── Dockerfile         # Docker image definition
-└── Roadmap.md         # Project roadmap and specifications
-```
+### **Step 3: Initial Setup**
+- **Chef**: Add 3-5 family favorite recipes to start
+- **Shopper**: Do a quick inventory of current pantry items
+- **Everyone**: Explore the interface and place a test order!
 
-## API Endpoints
+### **Step 4: Start Using Daily**
+- **Morning**: Check what's available for today's meals
+- **Throughout day**: Place orders for meals you want
+- **Cooking time**: Use the chef dashboard to coordinate preparation
+- **After shopping**: Quick pantry updates keep everything accurate
 
-### Core Endpoints
-- `GET /api/health/` - Health check
-- `GET /admin/` - Django admin interface
-- `GET /api/` - DRF browsable API root
-- `POST /auth/` - Authentication endpoints
+## Key Features That Make Life Easier
 
-### Phase 1 - Core Models & APIs
-- `GET|POST /api/families/` - Family management
-- `GET|POST|PUT|PATCH|DELETE /api/family-members/` - Family membership management
-- `GET|POST|PUT|PATCH|DELETE /api/ingredients/` - Ingredient management
-- `GET|POST|PUT|PATCH|DELETE /api/cuisines/` - Recipe/cuisine management
-- `GET|POST|PUT|PATCH|DELETE /api/recipe-ingredients/` - Recipe ingredient management
-- `GET|POST|PUT|PATCH|DELETE /api/pantry-stock/` - Pantry stock management
-- `GET /api/users/` - User information (read-only, family-scoped)
+### 📱 **Works Like a Native App**
+- Install on your phone's home screen
+- Works offline when internet is spotty
+- Fast, responsive interface designed for mobile
+- Automatic dark mode for evening use
 
-### Phase 2 - Ordering Flow
-- `GET /api/menu/` - Menu display with availability information
-- `GET|POST|PUT|PATCH|DELETE /api/orders/` - Order management
-- `PATCH /api/orders/{id}/update_status/` - Order status updates
-- WebSocket: `/ws/orders/{family_id}/` - Real-time order updates
+### 🔄 **Real-Time Family Coordination**
+- Live order updates - no more "How much longer?" questions
+- Instant notifications when meals are ready
+- Shared shopping lists that update automatically
+- Family-wide visibility into food planning
 
-### Phase 3 - Chef & Pantry
-- `GET|POST|PUT|PATCH|DELETE /api/alerts/` - Low-stock and expiry alerts
-- `PATCH /api/alerts/{id}/resolve/` - Mark alerts as resolved
-- `GET|POST|PUT|PATCH|DELETE /api/low-stock-thresholds/` - Configurable alert thresholds
-- Automated ingredient deduction when orders are completed
-- Celery tasks for daily low-stock and expiry checking
+### 🧠 **Smart Automation**
+- Automatic shopping list generation based on usage patterns
+- Ingredient quantities adjust as you cook
+- Low-stock alerts before you run out
+- Expiry date tracking to reduce waste
 
-### Phase 4 - Shopping List
-- `GET|POST|PUT|PATCH|DELETE /api/shopping-list/` - Shopping list management
-- `PATCH /api/shopping-list/{id}/resolve/` - Mark shopping list items as resolved
-- Automatic shopping list generation from low-stock and expired ingredient alerts
-- WebSocket: `/ws/shopping/{family_id}/` - Real-time shopping list updates
-- Celery task for daily shopping list generation
+### 🔒 **Family Privacy**
+- Your family's data stays private - no sharing between families
+- Secure login and family management
+- Each family member sees only their family's information
 
-### Phase 5 - Polish & PWA
-- **Progressive Web App (PWA) Features:**
-  - `GET /manifest.json` - PWA manifest for add-to-home-screen functionality
-  - Service worker for offline caching of menu and core functionality
-  - Offline-first caching strategy for menu data
-  - Install prompt for native app-like experience
-- **Responsive UI:**
-  - Mobile-first responsive design (1-column ≤480px, 2-column tablets, multi-column desktop)
-  - Touch-friendly interface with appropriate touch targets (44px+ minimum)
-  - Dark mode support with system preference detection
-  - High contrast and reduced motion accessibility support
-- **Frontend Templates:**
-  - `GET /` - Main menu page with PWA functionality
-  - `GET /chef/` - Chef dashboard (template)
-  - `GET /pantry/` - Pantry management (template)
-  - `GET /shopping/` - Shopping list (template)
-- **Performance Optimizations:**
-  - Offline menu caching via service worker
-  - Progressive enhancement for network connectivity
-  - Background sync for data updates when connection restored
+## Why FamilyChef Works
 
-## Development
+**For Busy Families**: Reduces the mental load of meal planning and shopping coordination
 
-This project follows the roadmap outlined in `Roadmap.md`. Current status: **Phase 6 Tests + CI/CD** ✅
+**For Food Waste**: Helps you use what you have before it goes bad
 
-### Code Quality and CI/CD
+**For Budget Management**: Smart shopping lists mean buying only what you need
 
-The project includes comprehensive CI/CD workflows with automated testing, code quality checks, and staging deployment:
+**For Family Harmony**: No more arguments about "What's for dinner?" or "We're out of..."
 
-#### Continuous Integration
-- **Automated Testing**: Django tests run on Python 3.11 and 3.12 with 84%+ code coverage
-- **End-to-End Testing**: Playwright-based e2e tests for critical user workflows
-- **Code Formatting**: Black formatter ensures consistent code style
-- **Import Sorting**: isort organizes imports automatically  
-- **Linting**: flake8 catches syntax errors and style issues
-- **Security Scanning**: bandit and safety scan for security vulnerabilities
-- **Docker Testing**: Full Docker Compose stack validation
+**For Health Goals**: Better meal planning leads to healthier eating habits
 
-#### Staging Deployment
-- **Automated Deployment**: Successful CI builds trigger staging deployment
-- **Health Checks**: Post-deployment verification of all endpoints
-- **Staging E2E Tests**: End-to-end testing against staging environment
-- **Docker Registry**: Automated image building and publishing
+## Technical Details
 
-#### Development Tools
-- **Code Formatting**: Run `black .` to format code
-- **Import Sorting**: Run `isort .` to organize imports
-- **Linting**: Run `flake8 .` to check for issues
-- **Security**: Run `bandit -r .` and `safety scan -r requirements.txt`
+FamilyChef is a Progressive Web App (PWA) built with modern web technologies:
+- **Offline capability** - works without internet connection
+- **Cross-platform** - works on any device with a web browser  
+- **Secure** - your family data is protected and private
+- **Fast** - optimized for quick loading and responsive interaction
 
-#### Running Tests Locally
+## Documentation
 
-##### Unit and Integration Tests
-```bash
-# Install development dependencies
-pip install -r requirements-dev.txt
+- **[User Guide](docs/user-guide.md)** - Complete guide for family members
+- **[Chef Guide](docs/chef-guide.md)** - Specialized guide for home chefs
+- **[Shopping Guide](docs/shopping-guide.md)** - Guide for family shoppers
+- **[Development Guide](docs/development.md)** - For developers and technical setup
+- **[API Documentation](docs/api.md)** - Technical API reference
 
-# Run Django tests with coverage
-coverage run --source='.' manage.py test
-coverage report --show-missing
+## Getting Help
 
-# Run specific test categories
-python manage.py test core.tests.APITests      # API tests
-python manage.py test core.tests.PWATests      # PWA tests  
-python manage.py test core.tests.CeleryTaskTests  # Background task tests
-```
-
-##### End-to-End Tests
-```bash
-# Install Playwright browsers
-playwright install chromium
-
-# Run e2e tests locally (requires running server)
-python manage.py runserver &  # Start server in background
-cd tests
-pytest -v --tb=short
-
-# Run e2e tests against staging
-E2E_BASE_URL=https://your-staging-url.com pytest -v
-```
-
-##### Code Quality Checks
-```bash
-# Run all code quality checks
-black --check .
-isort --check-only .
-flake8 .
-bandit -r .
-safety scan -r requirements.txt
-```
-
-### Testing Strategy
-
-The project follows Phase 6 testing requirements:
-
-- **Backend Coverage**: 84%+ unit and integration test coverage
-- **End-to-End Tests**: 20% of testing effort focused on critical user workflows
-- **PWA Testing**: Offline functionality, responsive design, and installation flows
-- **WebSocket Testing**: Real-time functionality validation
-- **Task Testing**: Background job and scheduled task validation
-
-For detailed project specifications, user flows, and development phases, see [Roadmap.md](./Roadmap.md).
+- **Browse the documentation** in the `docs/` folder
+- **Check the User Guide** for common questions and scenarios
+- **Contact your family admin** for family-specific setup issues
 
 ## License
 
-GPL-3.0 License - see [LICENSE](./LICENSE) file for details.
+FamilyChef is open source software licensed under GPL-3.0. See [LICENSE](LICENSE) for details.
+
+---
+
+**Ready to transform your family's cooking experience?** Get started with FamilyChef today and say goodbye to the daily dinner dilemma!
