@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="FamilyChef - A mobile web app that helps families plan, cook, and restock ingredients with minimal friction">
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#4CAF50">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="FamilyChef">
+    <meta name="mobile-web-app-capable" content="yes">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="{% url 'pwa_manifest' %}">
+    
+    <!-- Icons -->
+    <link rel="icon" type="image/png" sizes="192x192" href="{% load static %}{% static 'core/icons/icon-192x192.png' %}">
+    <link rel="apple-touch-icon" href="{% load static %}{% static 'core/icons/icon-192x192.png' %}">
+    
+    <title>{% block title %}FamilyChef - H5 Cooking Assistant{% endblock %}</title>
+    
+    <!-- Styles -->
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'core/css/main.css' %}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <h1 class="header-title">
+                <a href="{% url 'home' %}" style="color: inherit; text-decoration: none;">
+                    FamilyChef
+                </a>
+            </h1>
+            <div class="header-actions">
+                <!-- PWA Install Button -->
+                <button id="installBtn" class="btn btn-secondary" style="display: none;">
+                    Install App
+                </button>
+                
+                <!-- Theme Toggle -->
+                <button id="themeToggle" class="btn btn-secondary" title="Toggle Dark Mode">
+                    🌙
+                </button>
+                
+                <!-- User Menu -->
+                {% if user.is_authenticated %}
+                    <span class="user-name">{{ user.username }}</span>
+                {% else %}
+                    <a href="{% url 'account_login' %}" class="btn btn-secondary">Login</a>
+                {% endif %}
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation -->
+    <nav class="nav">
+        <div class="container">
+            <ul class="nav-list">
+                <li class="nav-item">
+                    <a href="{% url 'home' %}" class="nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}">
+                        Menu
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'chef_board' %}" class="nav-link {% if request.resolver_match.url_name == 'chef_board' %}active{% endif %}">
+                        Chef Board
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'pantry' %}" class="nav-link {% if request.resolver_match.url_name == 'pantry' %}active{% endif %}">
+                        Pantry
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'shopping_list' %}" class="nav-link {% if request.resolver_match.url_name == 'shopping_list' %}active{% endif %}">
+                        Shopping
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main">
+        <div class="container">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <!-- Scripts -->
+    <script src="{% static 'core/js/main.js' %}"></script>
+    <script src="{% static 'core/js/pwa.js' %}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

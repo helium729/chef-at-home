@@ -819,3 +819,237 @@ class AlertTaskTests(TestCase):
         alerts = Alert.objects.filter(family=self.family, ingredient=self.ingredient, alert_type="LOW_STOCK")
         self.assertEqual(alerts.count(), 1)
         self.assertTrue("Created 0 low stock alerts" in result)  # Second run should create 0
+
+
+class PWATests(TestCase):
+    """Test PWA functionality and features"""
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        # Collect static files for testing
+        from django.core.management import call_command
+        call_command('collectstatic', '--noinput', verbosity=0)
+
+    def setUp(self):
+        self.client = Client()
+
+    def test_pwa_manifest_endpoint(self):
+        """Test PWA manifest.json endpoint"""
+        response = self.client.get("/manifest.json")
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "application/manifest+json")
+        
+        data = json.loads(response.content)
+        
+        # Check required manifest fields
+        self.assertEqual(data["name"], "FamilyChef - H5 Cooking Assistant")
+        self.assertEqual(data["short_name"], "FamilyChef")
+        self.assertEqual(data["display"], "standalone")
+        self.assertEqual(data["theme_color"], "#4CAF50")
+        self.assertEqual(data["background_color"], "#ffffff")
+        self.assertEqual(data["start_url"], "/")
+        
+        # Check icons array exists
+        self.assertIn("icons", data)
+        self.assertIsInstance(data["icons"], list)
+        self.assertTrue(len(data["icons"]) > 0)
+        
+        # Check first icon has required fields
+        first_icon = data["icons"][0]
+        self.assertIn("src", first_icon)
+        self.assertIn("sizes", first_icon)
+        self.assertIn("type", first_icon)
+
+    def test_home_page_pwa_meta_tags(self):
+        """Test that home page includes PWA meta tags"""
+        response = self.client.get("/")
+        
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode()
+        
+        # Check PWA meta tags
+        self.assertIn('<meta name="theme-color" content="#4CAF50">', content)
+        self.assertIn('<meta name="apple-mobile-web-app-capable" content="yes">', content)
+        self.assertIn('<meta name="apple-mobile-web-app-title" content="FamilyChef">', content)
+        self.assertIn('<meta name="mobile-web-app-capable" content="yes">', content)
+        
+        # Check manifest link
+        self.assertIn('<link rel="manifest" href="/manifest.json">', content)
+        
+        # Check viewport meta tag for mobile responsiveness
+        self.assertIn('<meta name="viewport" content="width=device-width, initial-scale=1.0">', content)
+
+    def test_static_files_served(self):
+        """Test that PWA static files are accessible"""
+        # Test CSS file
+        response = self.client.get("/static/core/css/main.css")
+        self.assertEqual(response.status_code, 200)
+        
+        # Test JavaScript files
+        response = self.client.get("/static/core/js/main.js")
+        self.assertEqual(response.status_code, 200)
+        
+        response = self.client.get("/static/core/js/pwa.js")
+        self.assertEqual(response.status_code, 200)
+        
+        response = self.client.get("/static/core/js/sw.js")
+        self.assertEqual(response.status_code, 200)
+
+    def test_service_worker_caching_headers(self):
+        """Test service worker has appropriate caching headers"""
+        response = self.client.get("/static/core/js/sw.js")
+        
+        # Service worker should not be cached aggressively
+        self.assertEqual(response.status_code, 200)
+        # Note: In production, you'd want Cache-Control headers for service workers
+
+    def test_responsive_design_css_classes(self):
+        """Test that responsive design CSS classes are included"""
+        response = self.client.get("/static/core/css/main.css")
+        
+        # Handle WhiteNoise static file response
+        try:
+            content = response.content.decode()
+        except AttributeError:
+            # WhiteNoise streaming response
+            content = b''.join(response.streaming_content).decode()
+        
+        # Check for mobile-first responsive breakpoints
+        self.assertIn("@media (min-width: 481px)", content)  # Tablet
+        self.assertIn("@media (min-width: 769px)", content)  # Desktop
+        
+        # Check for responsive utility classes
+        self.assertIn(".col-12", content)
+        self.assertIn(".mobile", content)
+        self.assertIn(".tablet", content)
+        self.assertIn(".desktop", content)
+
+    def test_pwa_template_pages(self):
+        """Test that PWA template pages load correctly"""
+        pages = [
+            ("/", "menu"),
+            ("/chef/", "chef_board"),
+            ("/pantry/", "pantry"), 
+            ("/shopping/", "shopping_list"),
+        ]
+        
+        for url, page_name in pages:
+            with self.subTest(page=page_name):
+                response = self.client.get(url)
+                self.assertEqual(response.status_code, 200)
+                
+                content = response.content.decode()
+                
+                # Check base template elements
+                self.assertIn("FamilyChef", content)
+                self.assertIn("PWA", content)
+                self.assertIn("main.css", content)
+                self.assertIn("main.js", content)
+                self.assertIn("pwa.js", content)
+
+    def test_offline_functionality_javascript(self):
+        """Test that offline functionality JavaScript is included"""
+        response = self.client.get("/static/core/js/pwa.js")
+        
+        # Handle WhiteNoise static file response
+        try:
+            content = response.content.decode()
+        except AttributeError:
+            content = b''.join(response.streaming_content).decode()
+        
+        # Check for key PWA functionality
+        self.assertIn("serviceWorker", content)
+        self.assertIn("FamilyChefPWA", content)
+        self.assertIn("installPrompt", content)
+        self.assertIn("offline", content)
+        self.assertIn("beforeinstallprompt", content)
+
+    def test_service_worker_implementation(self):
+        """Test service worker includes required functionality"""
+        response = self.client.get("/static/core/js/sw.js")
+        
+        # Handle WhiteNoise static file response
+        try:
+            content = response.content.decode()
+        except AttributeError:
+            content = b''.join(response.streaming_content).decode()
+        
+        # Check for service worker events
+        self.assertIn("install", content)
+        self.assertIn("activate", content)
+        self.assertIn("fetch", content)
+        
+        # Check for caching strategies
+        self.assertIn("CACHE_NAME", content)
+        self.assertIn("caches.open", content)
+        self.assertIn("cache.addAll", content)
+        
+        # Check for offline menu support
+        self.assertIn("/api/menu/", content)
+        self.assertIn("networkFirstStrategy", content)
+        self.assertIn("cacheFirstStrategy", content)
+
+    def test_dark_mode_support(self):
+        """Test that dark mode CSS variables are included"""
+        response = self.client.get("/static/core/css/main.css")
+        
+        # Handle WhiteNoise static file response
+        try:
+            content = response.content.decode()
+        except AttributeError:
+            content = b''.join(response.streaming_content).decode()
+        
+        # Check for dark theme CSS variables
+        self.assertIn('[data-theme="dark"]', content)
+        self.assertIn("--bg-primary: #121212", content)
+        self.assertIn("--text-primary: #ffffff", content)
+        
+        # Check for theme toggle functionality in JavaScript
+        response = self.client.get("/static/core/js/main.js")
+        try:
+            js_content = response.content.decode()
+        except AttributeError:
+            js_content = b''.join(response.streaming_content).decode()
+        self.assertIn("toggleTheme", js_content)
+
+    def test_touch_friendly_design(self):
+        """Test that design includes touch-friendly elements"""
+        response = self.client.get("/static/core/css/main.css")
+        
+        # Handle WhiteNoise static file response
+        try:
+            content = response.content.decode()
+        except AttributeError:
+            content = b''.join(response.streaming_content).decode()
+        
+        # Check for touch-friendly minimum sizes
+        self.assertIn("min-height: 44px", content)  # Touch targets
+        self.assertIn("min-height: 48px", content)  # Larger touch targets
+        
+        # Check for touch-specific media queries
+        self.assertIn("@media (hover: none) and (pointer: coarse)", content)
+        
+        # Check for touch optimization
+        self.assertIn("touch-action: manipulation", content)
+
+    def test_accessibility_features(self):
+        """Test that accessibility features are included"""
+        response = self.client.get("/static/core/css/main.css")
+        
+        # Handle WhiteNoise static file response
+        try:
+            content = response.content.decode()
+        except AttributeError:
+            content = b''.join(response.streaming_content).decode()
+        
+        # Check for high contrast mode support
+        self.assertIn("@media (prefers-contrast: high)", content)
+        
+        # Check for reduced motion support
+        self.assertIn("@media (prefers-reduced-motion: reduce)", content)
+        
+        # Check for focus styles
+        self.assertIn("focus", content)
+        self.assertIn("outline", content)

@@ -123,9 +123,30 @@ familychef/
 - WebSocket: `/ws/shopping/{family_id}/` - Real-time shopping list updates
 - Celery task for daily shopping list generation
 
+### Phase 5 - Polish & PWA
+- **Progressive Web App (PWA) Features:**
+  - `GET /manifest.json` - PWA manifest for add-to-home-screen functionality
+  - Service worker for offline caching of menu and core functionality
+  - Offline-first caching strategy for menu data
+  - Install prompt for native app-like experience
+- **Responsive UI:**
+  - Mobile-first responsive design (1-column ≤480px, 2-column tablets, multi-column desktop)
+  - Touch-friendly interface with appropriate touch targets (44px+ minimum)
+  - Dark mode support with system preference detection
+  - High contrast and reduced motion accessibility support
+- **Frontend Templates:**
+  - `GET /` - Main menu page with PWA functionality
+  - `GET /chef/` - Chef dashboard (template)
+  - `GET /pantry/` - Pantry management (template)
+  - `GET /shopping/` - Shopping list (template)
+- **Performance Optimizations:**
+  - Offline menu caching via service worker
+  - Progressive enhancement for network connectivity
+  - Background sync for data updates when connection restored
+
 ## Development
 
-This project follows the roadmap outlined in `Roadmap.md`. Current status: **Phase 4 Shopping List** ✅
+This project follows the roadmap outlined in `Roadmap.md`. Current status: **Phase 5 Polish & PWA** ✅
 
 ### Code Quality and CI/CD
 
