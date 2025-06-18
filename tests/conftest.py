@@ -3,57 +3,44 @@ Base configuration for Playwright E2E tests
 """
 
 import os
+import sys
 
 import pytest
-from playwright.sync_api import Browser, BrowserContext, Page, Playwright
+
+# Add project root to path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# Check for Playwright availability
+PLAYWRIGHT_AVAILABLE = False
+try:
+    import playwright
+    from playwright.sync_api import Browser, BrowserContext, Page, Playwright
+    PLAYWRIGHT_AVAILABLE = True
+except ImportError:
+    Browser = BrowserContext = Page = Playwright = None
 
 
 class E2ETestBase:
     """Base class for E2E tests providing common setup and utilities"""
-
-    @pytest.fixture(scope="session")
-    def browser(self, playwright: Playwright) -> Browser:
-        """Launch browser for testing"""
-        browser = playwright.chromium.launch(headless=True, args=["--no-sandbox", "--disable-dev-shm-usage"])
-        yield browser
-        browser.close()
-
-    @pytest.fixture(scope="function")
-    def context(self, browser: Browser) -> BrowserContext:
-        """Create browser context with mobile-friendly settings"""
-        context = browser.new_context(
-            viewport={"width": 375, "height": 667},  # iPhone-like viewport
-            user_agent="Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X) AppleWebKit/605.1.15",
-            device_scale_factor=2,
-            has_touch=True,
-            is_mobile=True,
-        )
-        yield context
-        context.close()
-
-    @pytest.fixture(scope="function")
-    def page(self, context: BrowserContext) -> Page:
-        """Create new page for each test"""
-        page = context.new_page()
-        yield page
-        page.close()
 
     @property
     def base_url(self) -> str:
         """Get base URL for testing"""
         return os.getenv("E2E_BASE_URL", "http://localhost:8000")
 
-    def login(self, page: Page, username: str = "testuser", password: str = "testpass123"):
-        """Helper method to log in a user"""
-        page.goto(f"{self.base_url}/accounts/login/")
-        page.fill('input[name="login"]', username)
-        page.fill('input[name="password"]', password)
-        page.click('button[type="submit"]')
-        # Wait for redirect after login
-        page.wait_for_url(f"{self.base_url}/", timeout=5000)
 
-    def wait_for_api_response(self, page: Page, api_path: str, timeout: int = 5000):
-        """Wait for specific API response"""
-        with page.expect_response(f"**/api/{api_path}/**", timeout=timeout) as response_info:
-            pass
-        return response_info.value
+# Configure pytest markers
+def pytest_configure(config):
+    """Configure pytest markers"""
+    config.addinivalue_line("markers", "e2e: mark test as end-to-end test")
+    config.addinivalue_line("markers", "pwa: mark test as PWA functionality test")
+    config.addinivalue_line("markers", "workflow: mark test as user workflow test")
+
+
+def pytest_collection_modifyitems(config, items):
+    """Skip E2E tests if Playwright is not available"""
+    if not PLAYWRIGHT_AVAILABLE:
+        skip_e2e = pytest.mark.skip(reason="Playwright not available")
+        for item in items:
+            if "e2e" in item.keywords:
+                item.add_marker(skip_e2e)
