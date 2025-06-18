@@ -830,7 +830,7 @@ class PWATests(TestCase):
         # Collect static files for testing
         from django.core.management import call_command
 
-        call_command("collectstatic", "--noinput", verbosity=0)
+        call_command("collectstatic", "--noinput", verbosity=0)  # Ensure this is the only invocation
 
     def setUp(self):
         self.client = Client()
