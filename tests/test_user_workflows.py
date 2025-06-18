@@ -59,7 +59,7 @@ class TestUserWorkflows(E2ETestBase):
             order_buttons.first.click()
 
             # Wait for any modal or navigation
-            page.wait_for_timeout(1000)
+            expect(page.locator(".order-confirmation, .modal, [data-testid='order-confirmation']")).to_be_visible()
 
             # Check for order confirmation elements
             expect(page.locator("body")).to_be_visible()
