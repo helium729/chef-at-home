@@ -126,7 +126,7 @@ jobs:
         E2E_BASE_URL: ${{ vars.STAGING_URL || 'https://familychef-staging.fly.dev' }}
 
     - name: Upload staging E2E test results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: staging-e2e-test-results
